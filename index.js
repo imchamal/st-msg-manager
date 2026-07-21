@@ -306,8 +306,8 @@ function toggleRadialMenu() {
 // 찾은 결과 전체를 한 번에 바꿀지 체크박스로 고를 수 있어요.
 // ============================================================
 
-let searchResults = []; // 검색어가 포함된 메시지 번호들
-let searchIndex = -1;   // 지금 몇 번째 결과를 보고 있는지
+let searchResults = []; // { mesId, el(span 요소) } 목록 - "메시지"가 아니라 "찾은 단어 하나하나"예요
+let searchIndex = -1;   // 지금 몇 번째 단어를 보고 있는지
 let searchQuery = '';   // 마지막으로 검색한 단어
 
 /** 정규식에서 특수문자로 취급되는 글자를 그대로 문자로 찾도록 이스케이프해요. */
@@ -315,7 +315,7 @@ function escapeRegExp(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** 채팅 전체에서 검색어가 포함된 메시지 번호를 찾아요. */
+/** 채팅 전체에서 검색어가 포함된 메시지 번호를 찾아요. (어떤 메시지를 뒤질지 후보를 좁히는 용도) */
 function findMatches(query) {
     const results = [];
     context.chat.forEach((mes, idx) => {
@@ -326,25 +326,110 @@ function findMatches(query) {
     return results;
 }
 
-/** 전에 하이라이트했던 메시지가 있으면 원래대로 되돌려요. */
-function clearHighlight() {
-    document.querySelectorAll('#chat .mes.smm-search-highlight')
-        .forEach((el) => el.classList.remove('smm-search-highlight'));
+/**
+ * 특정 메시지(mesId) 화면 안에서, 검색어와 일치하는 부분들을
+ * <span class="smm-search-mark">로 감싸요. HTML 태그는 건드리지 않고
+ * "실제로 보이는 글자(텍스트 노드)"만 찾아서 감싸기 때문에 안전해요.
+ * 감싼 span 요소들을 순서대로 배열에 담아 돌려줘요.
+ */
+function highlightMatchesInMessage(mesId, query) {
+    const mesElement = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
+    const textContainer = mesElement?.querySelector('.mes_text');
+    if (!textContainer) {
+        return [];
+    }
+
+    const regex = new RegExp(escapeRegExp(query), 'gi');
+    const spans = [];
+
+    const walker = document.createTreeWalker(textContainer, NodeFilter.SHOW_TEXT, null);
+    const textNodes = [];
+    let node;
+    while ((node = walker.nextNode())) {
+        textNodes.push(node);
+    }
+
+    textNodes.forEach((textNode) => {
+        const text = textNode.textContent;
+        regex.lastIndex = 0;
+        if (!regex.test(text)) {
+            return;
+        }
+        regex.lastIndex = 0;
+
+        const frag = document.createDocumentFragment();
+        let lastIndex = 0;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+            }
+            const mark = document.createElement('span');
+            mark.className = 'smm-search-mark';
+            mark.textContent = match[0];
+            frag.appendChild(mark);
+            spans.push(mark);
+            lastIndex = match.index + match[0].length;
+        }
+        if (lastIndex < text.length) {
+            frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+        textNode.parentNode.replaceChild(frag, textNode);
+    });
+
+    return spans;
 }
 
-/** 검색 결과 중 지금 순번(searchIndex)의 메시지로 이동하고 상태 표시를 갱신해요. */
+/** 감싸뒀던 <span> 하이라이트를 전부 원래 텍스트로 되돌려요. */
+function clearHighlight() {
+    document.querySelectorAll('#chat .smm-search-mark').forEach((mark) => {
+        const parent = mark.parentNode;
+        if (!parent) return;
+        parent.replaceChild(document.createTextNode(mark.textContent), mark);
+        parent.normalize();
+    });
+}
+
+/**
+ * 지금 검색어를 기준으로 하이라이트를 다시 그려요.
+ * preserveIndex: 가능하면 이 순번을 유지해서 보여줘요.
+ * (바꾸기 하나만 했을 때, 방금 바꾼 자리에 있던 "다음" 단어로 자연스럽게 이어지게 하기 위함이에요)
+ */
+function refreshSearchHighlights(preserveIndex) {
+    clearHighlight();
+
+    const matchingMesIds = findMatches(searchQuery);
+    const newResults = [];
+    matchingMesIds.forEach((mesId) => {
+        const spans = highlightMatchesInMessage(mesId, searchQuery);
+        spans.forEach((el) => newResults.push({ mesId, el }));
+    });
+    searchResults = newResults;
+
+    const status = document.getElementById('smm-search-status');
+    if (searchResults.length === 0) {
+        searchIndex = -1;
+        if (status) status.textContent = '0 / 0';
+        toastr.info('더 이상 검색 결과가 없어요.');
+        return;
+    }
+
+    searchIndex = Math.min(preserveIndex, searchResults.length - 1);
+    showCurrentSearchResult();
+}
+
+/** 지금 순번(searchIndex)의 단어로 스크롤 + 색깔 구분(현재 위치만 다른 색)을 해줘요. */
 function showCurrentSearchResult() {
     if (searchResults.length === 0) {
         return;
     }
-    clearHighlight();
-    const mesId = searchResults[searchIndex];
-    scrollToMesId(mesId);
 
-    const target = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
-    if (target) {
-        target.classList.add('smm-search-highlight');
-    }
+    searchResults.forEach(({ el }) => el.classList.remove('smm-search-mark-current'));
+
+    const { el, mesId } = searchResults[searchIndex];
+    el.classList.add('smm-search-mark-current');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    currentMesId = mesId;
 
     const status = document.getElementById('smm-search-status');
     if (status) {
@@ -360,18 +445,7 @@ function runSearch(query) {
         return;
     }
 
-    searchResults = findMatches(searchQuery);
-    searchIndex = 0;
-
-    const status = document.getElementById('smm-search-status');
-    if (searchResults.length === 0) {
-        clearHighlight();
-        if (status) status.textContent = '0 / 0';
-        toastr.info('검색 결과가 없어요.');
-        return;
-    }
-
-    showCurrentSearchResult();
+    refreshSearchHighlights(0);
 }
 
 function searchPrev() {
@@ -386,6 +460,16 @@ function searchNext() {
     showCurrentSearchResult();
 }
 
+/** 문자열(text) 안에서 regex와 일치하는 것 중 n번째(0부터 시작)만 replaceText로 바꿔요. */
+function replaceNthOccurrence(text, regex, n, replaceText) {
+    let count = 0;
+    return text.replace(regex, (match) => {
+        const isTarget = count === n;
+        count++;
+        return isTarget ? replaceText : match;
+    });
+}
+
 /** 실제로 텍스트를 바꾸고, 화면 갱신 + 저장까지 처리해요. */
 async function performReplace(replaceText, applyToAll) {
     if (searchResults.length === 0) {
@@ -393,22 +477,39 @@ async function performReplace(replaceText, applyToAll) {
         return;
     }
 
-    const targetIds = applyToAll ? searchResults : [searchResults[searchIndex]];
     const regex = new RegExp(escapeRegExp(searchQuery), 'gi');
 
-    targetIds.forEach((mesId) => {
-        const mes = context.chat[mesId];
-        if (!mes || !mes.mes) return;
-        mes.mes = mes.mes.replace(regex, replaceText);
-        updateMessageBlock(mesId, mes);
-    });
+    // 전체 일괄 바꾸기: 검색된 모든 메시지에서 전부 바꾸고 검색창을 닫아요.
+    if (applyToAll) {
+        const mesIds = [...new Set(searchResults.map((r) => r.mesId))];
+        mesIds.forEach((mesId) => {
+            const mes = context.chat[mesId];
+            if (!mes || !mes.mes) return;
+            mes.mes = mes.mes.replace(regex, replaceText);
+            updateMessageBlock(mesId, mes);
+        });
+        await saveChat();
+        toastr.success(`${mesIds.length}개 메시지에서 모두 바꿨어요.`);
+        closeSearchBar();
+        return;
+    }
 
+    // 하나씩 바꾸기: 지금 보고 있는 단어 1개만 바꾸고, 검색창은 그대로 열어둬요.
+    const current = searchResults[searchIndex];
+    const mes = context.chat[current.mesId];
+    if (!mes || !mes.mes) return;
+
+    // 같은 메시지 안에서 지금 단어가 몇 번째(0부터) occurrence인지 계산해요.
+    const sameMessageResults = searchResults.filter((r) => r.mesId === current.mesId);
+    const occurrenceIndex = sameMessageResults.indexOf(current);
+
+    mes.mes = replaceNthOccurrence(mes.mes, regex, occurrenceIndex, replaceText);
+    updateMessageBlock(current.mesId, mes);
     await saveChat();
-    toastr.success(applyToAll
-        ? `${targetIds.length}개 메시지를 모두 바꿨어요.`
-        : '현재 메시지를 바꿨어요.');
+    toastr.success('현재 단어를 바꿨어요.');
 
-    closeSearchBar();
+    // 방금 바꾼 자리를 기준으로 검색 결과를 다시 그려서, 다음 단어가 자연스럽게 이어서 보이게 해요.
+    refreshSearchHighlights(searchIndex);
 }
 
 function closeSearchBar() {

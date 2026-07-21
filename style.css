@@ -165,9 +165,15 @@
     white-space: nowrap;
 }
 
-/* 검색으로 찾은 현재 메시지를 잠깐 강조해요 */
-.mes.smm-search-highlight {
-    outline: 2px solid var(--SmartThemeQuoteColor, #3a8ee6);
-    outline-offset: -2px;
-    border-radius: 6px;
+/* 검색으로 찾은 단어들 (기본 하이라이트) */
+.smm-search-mark {
+    background-color: #fff3a3;
+    border-radius: 3px;
+    padding: 0 1px;
+}
+
+/* 그중 지금 스크롤로 포커스된 단어만 다른 색으로 구분 */
+.smm-search-mark.smm-search-mark-current {
+    background-color: var(--SmartThemeQuoteColor, #3a8ee6);
+    color: #ffffff;
 }

@@ -4,7 +4,7 @@
     "js": "index.js",
     "css": "style.css",
     "author": "imchamal",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "homePage": "https://github.com/imchamal/st-msg-manager",
     "auto_update": true
 }
