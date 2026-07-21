@@ -301,3 +301,182 @@
 #smm-list-footer .smm-danger-button {
     border-color: #e33a3a;
 }
+
+/* 스와이프 관리 - 1단계: 목록 */
+#smm-swipe-list-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.35);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#smm-swipe-list-panel {
+    width: min(480px, 90vw);
+    max-height: 80vh;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#smm-swipe-list-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.smm-swipe-list-row {
+    cursor: pointer;
+}
+
+.smm-swipe-list-row:hover {
+    background-color: #f7f9ff;
+}
+
+.smm-swipe-empty {
+    padding: 24px 14px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}
+
+.smm-swipe-count-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--SmartThemeQuoteColor, #3a8ee6);
+    background-color: rgba(58, 142, 230, 0.12);
+    border-radius: 10px;
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+
+/* 스와이프 관리 - 2단계: 상세보기 */
+#smm-swipe-detail-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.35);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#smm-swipe-detail-panel {
+    width: min(480px, 90vw);
+    max-height: 80vh;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#smm-swipe-back,
+#smm-swipe-detail-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    font-size: 16px;
+}
+
+#smm-swipe-detail-toolbar {
+    padding: 8px 14px;
+    border-bottom: 1px solid #eee;
+}
+
+#smm-swipe-detail-toolbar .smm-scroll-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #e33a3a;
+    border-radius: 10px;
+    padding: 8px;
+    font-size: 13px;
+}
+
+#smm-swipe-detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.smm-swipe-detail-row {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.smm-swipe-detail-row-current {
+    background-color: rgba(58, 142, 230, 0.06);
+}
+
+.smm-swipe-detail-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.smm-swipe-version-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+}
+
+.smm-swipe-current-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: var(--SmartThemeQuoteColor, #3a8ee6);
+    border-radius: 8px;
+    padding: 1px 7px;
+}
+
+.smm-swipe-expand-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    font-size: 13px;
+}
+
+.smm-swipe-detail-text {
+    font-size: 13px;
+    color: #555;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.smm-swipe-detail-text-expanded {
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.smm-swipe-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.smm-swipe-detail-actions .smm-scroll-btn {
+    border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.smm-swipe-detail-actions .smm-danger-button {
+    border-color: #e33a3a;
+}

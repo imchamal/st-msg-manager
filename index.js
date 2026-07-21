@@ -235,7 +235,7 @@ function getRadialMenuItems() {
         { id: 'smm-radial-list', icon: 'fa-list-ul', title: '메시지 목록 관리', angle: 100,
             onClick: () => { createListPanel(); closeRadialMenu(); } },
         { id: 'smm-radial-swipe', icon: 'fa-shuffle', title: '스와이프 관리', angle: 130,
-            onClick: () => toastr.info('스와이프 관리는 다음 단계에서 만들 거예요.') },
+            onClick: () => { openSwipeListPanel(); closeRadialMenu(); } },
         { id: 'smm-radial-search', icon: 'fa-magnifying-glass', title: '검색/바꾸기', angle: 160,
             onClick: () => { createSearchBar(); closeRadialMenu(); } },
         { id: 'smm-radial-move', icon: 'fa-arrows-up-down', title: '이동', angle: 190,
@@ -739,6 +739,275 @@ function createListPanel() {
     document.getElementById('smm-list-hide-btn').addEventListener('click', toggleHideSelectedMessages);
 
     renderListRows();
+}
+
+// ============================================================
+// 기능 5: 스와이프 관리
+// ------------------------------------------------------------
+// 캐릭터 메시지 중 "다시 생성하기"로 여러 버전(스와이프)이 쌓인
+// 메시지만 모아서 보여주고, 버전별로 채택/삭제할 수 있어요.
+//
+// 주의: 실리태번 기본 명령어 /delswipe는 "채팅의 맨 마지막 메시지"에만
+// 쓸 수 있어요. 우리는 과거의 아무 메시지나 다뤄야 하니까,
+// 명령어 대신 context.chat 데이터를 직접 수정하고
+// updateMessageBlock + saveChat으로 화면/저장을 반영하는 방식으로 만들었어요.
+// ============================================================
+
+let currentSwipeDetailMesId = null; // 지금 상세보기 중인 메시지 번호
+let swipeExpandedSet = new Set();   // 상세보기에서 펼쳐진(전체 텍스트 보기) 버전 번호들
+
+/** 스와이프가 2개 이상 있는 메시지만 골라서 [{idx, mes}, ...] 형태로 돌려줘요. */
+function getSwipedMessages() {
+    const result = [];
+    context.chat.forEach((mes, idx) => {
+        if (Array.isArray(mes.swipes) && mes.swipes.length > 1) {
+            result.push({ idx, mes });
+        }
+    });
+    return result;
+}
+
+// ---------- 1단계: 스와이프 있는 메시지 목록 ----------
+
+function closeSwipeListPanel() {
+    const overlay = document.getElementById('smm-swipe-list-overlay');
+    if (overlay) overlay.remove();
+}
+
+function renderSwipeListRows() {
+    const body = document.getElementById('smm-swipe-list-body');
+    if (!body) return;
+
+    body.innerHTML = '';
+    const items = getSwipedMessages();
+
+    if (items.length === 0) {
+        body.innerHTML = '<div class="smm-swipe-empty">스와이프가 2개 이상인 메시지가 없어요.</div>';
+        return;
+    }
+
+    items.forEach(({ idx, mes }) => {
+        const row = document.createElement('div');
+        row.className = 'smm-list-row smm-swipe-list-row';
+        row.innerHTML = `
+            <span class="smm-list-index">#${idx}</span>
+            <span class="smm-list-name">${mes.name || ''}</span>
+            <span class="smm-list-preview">${getMessagePreview(mes.mes)}</span>
+            <span class="smm-swipe-count-badge">${mes.swipes.length}개</span>
+        `;
+        row.addEventListener('click', () => openSwipeDetailPanel(idx));
+        body.appendChild(row);
+    });
+}
+
+function openSwipeListPanel() {
+    closeSwipeDetailPanel();
+    if (document.getElementById('smm-swipe-list-overlay')) {
+        renderSwipeListRows();
+        return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'smm-swipe-list-overlay';
+    overlay.innerHTML = `
+        <div id="smm-swipe-list-panel">
+            <div id="smm-list-header">
+                <span id="smm-list-title">스와이프 관리</span>
+                <button id="smm-swipe-list-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="smm-swipe-list-body"></div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeSwipeListPanel();
+    });
+    document.getElementById('smm-swipe-list-close').addEventListener('click', closeSwipeListPanel);
+
+    renderSwipeListRows();
+}
+
+// ---------- 2단계: 특정 메시지의 스와이프 버전 상세보기 ----------
+
+function closeSwipeDetailPanel() {
+    const overlay = document.getElementById('smm-swipe-detail-overlay');
+    if (overlay) overlay.remove();
+    currentSwipeDetailMesId = null;
+    swipeExpandedSet.clear();
+}
+
+function backToSwipeList() {
+    closeSwipeDetailPanel();
+    openSwipeListPanel();
+}
+
+/** 특정 버전으로 전환(채택)해요. */
+async function switchToSwipe(mesId, swipeIndex) {
+    const mes = context.chat[mesId];
+    if (!mes || !mes.swipes || !mes.swipes[swipeIndex]) return;
+
+    mes.swipe_id = swipeIndex;
+    mes.mes = mes.swipes[swipeIndex];
+    updateMessageBlock(mesId, mes);
+    await saveChat();
+
+    toastr.success(`${swipeIndex + 1}번째 버전으로 전환했어요.`);
+    renderSwipeDetailRows();
+}
+
+/** 특정 버전 하나를 삭제해요. */
+async function deleteSwipe(mesId, swipeIndex) {
+    const mes = context.chat[mesId];
+    if (!mes || !mes.swipes || mes.swipes.length <= 1) {
+        toastr.warning('마지막 남은 버전은 이 화면에서 지울 수 없어요.');
+        return;
+    }
+
+    const result = await Popup.show.confirm(
+        '스와이프 삭제',
+        `${swipeIndex + 1}번째 버전을 삭제할까요? 되돌릴 수 없어요.`,
+    );
+    if (result !== POPUP_RESULT.AFFIRMATIVE) return;
+
+    mes.swipes.splice(swipeIndex, 1);
+    if (Array.isArray(mes.swipe_info)) {
+        mes.swipe_info.splice(swipeIndex, 1);
+    }
+
+    if (swipeIndex < mes.swipe_id) {
+        mes.swipe_id -= 1;
+    } else if (swipeIndex === mes.swipe_id) {
+        mes.swipe_id = Math.min(mes.swipe_id, mes.swipes.length - 1);
+    }
+    mes.mes = mes.swipes[mes.swipe_id];
+
+    updateMessageBlock(mesId, mes);
+    await saveChat();
+    toastr.success('삭제했어요.');
+
+    // 이제 스와이프가 1개만 남았다면 더 이상 "스와이프 있는 메시지"가 아니니, 목록으로 돌아가요.
+    if (mes.swipes.length <= 1) {
+        backToSwipeList();
+    } else {
+        renderSwipeDetailRows();
+    }
+}
+
+/** 지금 채택된 버전 하나만 남기고 나머지는 전부 지워요. */
+async function keepOnlyCurrentSwipe(mesId) {
+    const mes = context.chat[mesId];
+    if (!mes || !mes.swipes) return;
+
+    const result = await Popup.show.confirm(
+        '현재 버전만 남기기',
+        '지금 보고 있는 버전 하나만 남기고 나머지 스와이프를 전부 삭제할까요? 되돌릴 수 없어요.',
+    );
+    if (result !== POPUP_RESULT.AFFIRMATIVE) return;
+
+    mes.swipes = [mes.mes];
+    mes.swipe_id = 0;
+    if (Array.isArray(mes.swipe_info)) {
+        mes.swipe_info = mes.swipe_info.length ? [mes.swipe_info[0]] : [];
+    }
+
+    updateMessageBlock(mesId, mes);
+    await saveChat();
+    toastr.success('현재 버전만 남겼어요.');
+
+    backToSwipeList();
+}
+
+function toggleSwipeExpand(swipeIndex) {
+    if (swipeExpandedSet.has(swipeIndex)) {
+        swipeExpandedSet.delete(swipeIndex);
+    } else {
+        swipeExpandedSet.add(swipeIndex);
+    }
+    renderSwipeDetailRows();
+}
+
+function renderSwipeDetailRows() {
+    const body = document.getElementById('smm-swipe-detail-body');
+    if (!body || currentSwipeDetailMesId === null) return;
+
+    const mes = context.chat[currentSwipeDetailMesId];
+    if (!mes || !mes.swipes) return;
+
+    body.innerHTML = '';
+
+    mes.swipes.forEach((swipeText, i) => {
+        const isCurrent = i === mes.swipe_id;
+        const isExpanded = swipeExpandedSet.has(i);
+
+        const row = document.createElement('div');
+        row.className = 'smm-swipe-detail-row';
+        if (isCurrent) row.classList.add('smm-swipe-detail-row-current');
+
+        row.innerHTML = `
+            <div class="smm-swipe-detail-top">
+                <span class="smm-swipe-version-badge">버전 ${i + 1}</span>
+                ${isCurrent ? '<span class="smm-swipe-current-tag">현재</span>' : ''}
+                <button class="smm-swipe-expand-btn" title="펼치기/접기">
+                    <i class="fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
+                </button>
+            </div>
+            <div class="smm-swipe-detail-text ${isExpanded ? 'smm-swipe-detail-text-expanded' : ''}">
+                ${isExpanded ? (swipeText || '') : getMessagePreview(swipeText)}
+            </div>
+            <div class="smm-swipe-detail-actions">
+                ${isCurrent ? '' : '<button class="smm-scroll-btn smm-swipe-adopt-btn">채택</button>'}
+                <button class="smm-scroll-btn smm-danger-button smm-swipe-delete-btn">삭제</button>
+            </div>
+        `;
+
+        row.querySelector('.smm-swipe-expand-btn').addEventListener('click', () => toggleSwipeExpand(i));
+        const adoptBtn = row.querySelector('.smm-swipe-adopt-btn');
+        if (adoptBtn) {
+            adoptBtn.addEventListener('click', () => switchToSwipe(currentSwipeDetailMesId, i));
+        }
+        row.querySelector('.smm-swipe-delete-btn').addEventListener('click', () => deleteSwipe(currentSwipeDetailMesId, i));
+
+        body.appendChild(row);
+    });
+}
+
+function openSwipeDetailPanel(mesId) {
+    closeSwipeListPanel();
+    currentSwipeDetailMesId = mesId;
+    swipeExpandedSet.clear();
+
+    const mes = context.chat[mesId];
+
+    const overlay = document.createElement('div');
+    overlay.id = 'smm-swipe-detail-overlay';
+    overlay.innerHTML = `
+        <div id="smm-swipe-detail-panel">
+            <div id="smm-list-header">
+                <button id="smm-swipe-back" title="목록으로"><i class="fa-solid fa-arrow-left"></i></button>
+                <span id="smm-list-title">#${mesId} 스와이프 (${mes.swipes.length}개)</span>
+                <button id="smm-swipe-detail-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="smm-swipe-detail-toolbar">
+                <button id="smm-swipe-keep-only-btn" class="smm-scroll-btn smm-danger-button">
+                    <i class="fa-solid fa-broom"></i> 현재 버전만 남기고 삭제
+                </button>
+            </div>
+            <div id="smm-swipe-detail-body"></div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeSwipeDetailPanel();
+    });
+    document.getElementById('smm-swipe-back').addEventListener('click', backToSwipeList);
+    document.getElementById('smm-swipe-detail-close').addEventListener('click', closeSwipeDetailPanel);
+    document.getElementById('smm-swipe-keep-only-btn').addEventListener('click', () => keepOnlyCurrentSwipe(mesId));
+
+    renderSwipeDetailRows();
 }
 
 /**
