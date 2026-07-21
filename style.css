@@ -204,7 +204,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 14px;
+    padding: 15px 14px 11px 14px; /* 너무 내려갔다 싶으면 15px를 14px로 줄이기*/
     border-bottom: 1px solid #eee;
 }
 
@@ -273,14 +273,14 @@
 /* 개별 체크박스 & 전체선택 체크박스 - 같은 모양으로 통일
    (브라우저 기본 체크박스 대신 직접 그려서 크기/정렬을 완전히 고정해요) */
 .smm-list-checkbox {
-    -webkit-appearance: none;
-    appearance: none;
-    box-sizing: border-box;
-    width: 18px;
-    height: 18px;
-    min-width: 18px;
-    margin: 0;
-    padding: 0;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    box-sizing: border-box !important;
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    margin: 0 !important;
+    padding: 0 !important;
     border: 1.5px solid #ccc;
     border-radius: 5px;
     cursor: pointer;
