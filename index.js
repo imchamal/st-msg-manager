@@ -173,16 +173,22 @@ function getLastMesId() {
 /** 특정 번호의 메시지로 화면을 부드럽게 스크롤해요.
  *  화면에 아직 안 그려진(=로딩 안 된) 메시지라면, 채팅 맨 위로 스크롤해서
  *  실리태번이 이전 메시지를 더 불러오게 만든 다음 다시 찾아봐요. */
+/** 특정 번호의 메시지로 화면을 부드럽게 스크롤해요.
+ *  화면에 아직 안 그려진(=로딩 안 된) 메시지라면, 실리태번의
+ *  "Show more messages" 버튼을 직접 눌러서 이전 메시지를 불러온 다음
+ *  다시 찾아봐요. (스크롤로는 더 안 불러와져서 버튼을 눌러야 해요.) */
 async function scrollToMesId(mesId) {
-    const chatEl = document.getElementById('chat');
     let target = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
     let attempts = 0;
 
-    while (!target && attempts < 30) {
-        if (chatEl) {
-            chatEl.scrollTop = 0; // 맨 위로 스크롤 → 실리태번이 이전 메시지를 추가로 불러와요
+    while (!target && attempts < 50) {
+        const showMoreBtn = document.getElementById('show_more_messages');
+        if (!showMoreBtn) {
+            // 버튼이 없다는 건 더 불러올 이전 메시지가 없다는 뜻이에요.
+            break;
         }
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        showMoreBtn.click();
+        await new Promise((resolve) => setTimeout(resolve, 60));
         target = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
         attempts += 1;
     }
