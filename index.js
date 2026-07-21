@@ -390,6 +390,14 @@ function clearHighlight() {
     });
 }
 
+/** 이전/다음/바꾸기 버튼이 있는 줄을 보이거나 숨겨요. (검색 결과가 있을 때만 보여줘요) */
+function setSearchNavVisible(visible) {
+    const navRow = document.getElementById('smm-search-nav-row');
+    if (navRow) {
+        navRow.style.display = visible ? 'flex' : 'none';
+    }
+}
+
 /**
  * 지금 검색어를 기준으로 하이라이트를 다시 그려요.
  * preserveIndex: 가능하면 이 순번을 유지해서 보여줘요.
@@ -407,16 +415,18 @@ function refreshSearchHighlights(preserveIndex) {
     searchResults = newResults;
 
     const status = document.getElementById('smm-search-status');
-    if (searchResults.length === 0) {
-        searchIndex = -1;
-        if (status) status.textContent = '0 / 0';
-        toastr.info('더 이상 검색 결과가 없어요.');
-        return;
-    }
+        if (searchResults.length === 0) {
+            searchIndex = -1;
+            if (status) status.textContent = '0 / 0';
+            setSearchNavVisible(false);
+            toastr.info('더 이상 검색 결과가 없어요.');
+            return;
+        }
 
-    searchIndex = Math.min(preserveIndex, searchResults.length - 1);
-    showCurrentSearchResult();
-}
+        setSearchNavVisible(true);
+        searchIndex = Math.min(preserveIndex, searchResults.length - 1);
+        showCurrentSearchResult();
+    }
 
 /** 지금 순번(searchIndex)의 단어로 스크롤 + 색깔 구분(현재 위치만 다른 색)을 해줘요. */
 function showCurrentSearchResult() {
@@ -529,23 +539,25 @@ function createSearchBar() {
     const bar = document.createElement('div');
     bar.id = 'smm-searchbar';
     bar.innerHTML = `
-        <div class="smm-search-row">
-            <input type="text" id="smm-search-input" placeholder="찾을 단어" />
-            <button class="smm-scroll-btn" id="smm-search-go" title="검색"><i class="fa-solid fa-magnifying-glass"></i></button>
-            <button class="smm-scroll-btn" id="smm-search-prev" title="이전 결과"><i class="fa-solid fa-angle-up"></i></button>
-            <span id="smm-search-status">0 / 0</span>
-            <button class="smm-scroll-btn" id="smm-search-next" title="다음 결과"><i class="fa-solid fa-angle-down"></i></button>
-            <button class="smm-scroll-btn" id="smm-search-replace-toggle" title="바꾸기"><i class="fa-solid fa-repeat"></i></button>
-            <button class="smm-scroll-btn smm-scroll-close" id="smm-search-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="smm-search-row" id="smm-search-replace-row" style="display:none;">
-            <input type="text" id="smm-replace-input" placeholder="바꿀 단어" />
-            <label class="smm-search-all-label">
-                <input type="checkbox" id="smm-replace-all" /> 전체
-            </label>
-            <button class="smm-scroll-btn smm-danger-button" id="smm-replace-confirm" title="바꾸기 확인"><i class="fa-solid fa-check"></i></button>
-        </div>
-    `;
+            <div class="smm-search-row">
+                <input type="text" id="smm-search-input" placeholder="찾을 단어" />
+                <button class="smm-scroll-btn" id="smm-search-go" title="검색"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <button class="smm-scroll-btn smm-scroll-close" id="smm-search-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="smm-search-row" id="smm-search-nav-row" style="display:none;">
+                <button class="smm-scroll-btn" id="smm-search-prev" title="이전 결과"><i class="fa-solid fa-angle-up"></i></button>
+                <span id="smm-search-status">0 / 0</span>
+                <button class="smm-scroll-btn" id="smm-search-next" title="다음 결과"><i class="fa-solid fa-angle-down"></i></button>
+                <button class="smm-scroll-btn" id="smm-search-replace-toggle" title="바꾸기"><i class="fa-solid fa-repeat"></i></button>
+            </div>
+            <div class="smm-search-row" id="smm-search-replace-row" style="display:none;">
+                <input type="text" id="smm-replace-input" placeholder="바꿀 단어" />
+                <label class="smm-search-all-label">
+                    <input type="checkbox" id="smm-replace-all" /> 전체
+                </label>
+                <button class="smm-scroll-btn smm-danger-button" id="smm-replace-confirm" title="바꾸기 확인"><i class="fa-solid fa-check"></i></button>
+            </div>
+        `;
 
     document.body.appendChild(bar);
 
