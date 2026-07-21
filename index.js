@@ -769,10 +769,9 @@ function renderListRows() {
 
         const checked = listSelectedIds.has(idx) ? 'checked' : '';
         row.innerHTML = `
-            <input type="checkbox" class="smm-list-checkbox" data-mesid="${idx}" ${checked} />
             <span class="smm-list-index">#${idx}</span>
-            <span class="smm-list-name">${mes.name || ''}</span>
             <span class="smm-list-preview">${getMessagePreview(mes.mes)}</span>
+            <span class="smm-swipe-count-badge">${mes.swipes.length}개</span>
         `;
 
         row.querySelector('.smm-list-checkbox').addEventListener('change', (e) => {
