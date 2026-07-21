@@ -118,3 +118,56 @@
 .smm-quick-delete:hover {
     opacity: 0.7;
 }
+
+/* 검색/바꾸기 바 */
+#smm-searchbar {
+    position: fixed;
+    left: 50%;
+    bottom: 90px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background-color: #ffffff;
+    border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
+    border-radius: 16px;
+    padding: 8px 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    z-index: 9998;
+}
+
+.smm-search-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#smm-search-input,
+#smm-replace-input {
+    width: 120px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 4px 8px;
+}
+
+#smm-search-status {
+    font-size: 13px;
+    color: #666;
+    min-width: 40px;
+    text-align: center;
+}
+
+.smm-search-all-label {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+/* 검색으로 찾은 현재 메시지를 잠깐 강조해요 */
+.mes.smm-search-highlight {
+    outline: 2px solid var(--SmartThemeQuoteColor, #3a8ee6);
+    outline-offset: -2px;
+    border-radius: 6px;
+}

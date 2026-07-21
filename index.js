@@ -17,6 +17,8 @@ const {
     Popup,
     POPUP_RESULT,
     executeSlashCommandsWithOptions,
+    updateMessageBlock,
+    saveChat,
 } = context;
 
 // 우리 확장을 구분하는 고유한 이름표예요.
@@ -175,7 +177,7 @@ function scrollToMesId(mesId) {
         toastr.warning('해당 번호의 메시지를 찾을 수 없어요.');
         return;
     }
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     currentMesId = mesId;
 }
 
@@ -235,7 +237,7 @@ function getRadialMenuItems() {
         { id: 'smm-radial-swipe', icon: 'fa-shuffle', title: '스와이프 관리', angle: 130,
             onClick: () => toastr.info('스와이프 관리는 다음 단계에서 만들 거예요.') },
         { id: 'smm-radial-search', icon: 'fa-magnifying-glass', title: '검색/바꾸기', angle: 160,
-            onClick: () => toastr.info('검색/바꾸기는 다음 단계에서 만들 거예요.') },
+            onClick: () => { createSearchBar(); closeRadialMenu(); } },
         { id: 'smm-radial-move', icon: 'fa-arrows-up-down', title: '이동', angle: 190,
             onClick: () => { createScrollBar(); closeRadialMenu(); } },
     ];
@@ -293,6 +295,181 @@ function toggleRadialMenu() {
     } else {
         createRadialMenu();
     }
+}
+
+// ============================================================
+// 기능 3: 검색 / 바꾸기
+// ------------------------------------------------------------
+// 원형 메뉴의 "검색" 아이콘을 누르면 검색창이 뜨고,
+// 입력한 단어가 들어있는 메시지들을 찾아서 하나씩 스크롤로 보여줘요.
+// "바꾸기" 버튼을 누르면 지금 보고 있는 것만 바꿀지,
+// 찾은 결과 전체를 한 번에 바꿀지 체크박스로 고를 수 있어요.
+// ============================================================
+
+let searchResults = []; // 검색어가 포함된 메시지 번호들
+let searchIndex = -1;   // 지금 몇 번째 결과를 보고 있는지
+let searchQuery = '';   // 마지막으로 검색한 단어
+
+/** 정규식에서 특수문자로 취급되는 글자를 그대로 문자로 찾도록 이스케이프해요. */
+function escapeRegExp(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** 채팅 전체에서 검색어가 포함된 메시지 번호를 찾아요. */
+function findMatches(query) {
+    const results = [];
+    context.chat.forEach((mes, idx) => {
+        if (mes.mes && mes.mes.toLowerCase().includes(query.toLowerCase())) {
+            results.push(idx);
+        }
+    });
+    return results;
+}
+
+/** 전에 하이라이트했던 메시지가 있으면 원래대로 되돌려요. */
+function clearHighlight() {
+    document.querySelectorAll('#chat .mes.smm-search-highlight')
+        .forEach((el) => el.classList.remove('smm-search-highlight'));
+}
+
+/** 검색 결과 중 지금 순번(searchIndex)의 메시지로 이동하고 상태 표시를 갱신해요. */
+function showCurrentSearchResult() {
+    if (searchResults.length === 0) {
+        return;
+    }
+    clearHighlight();
+    const mesId = searchResults[searchIndex];
+    scrollToMesId(mesId);
+
+    const target = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
+    if (target) {
+        target.classList.add('smm-search-highlight');
+    }
+
+    const status = document.getElementById('smm-search-status');
+    if (status) {
+        status.textContent = `${searchIndex + 1} / ${searchResults.length}`;
+    }
+}
+
+/** 검색어를 실행하는 함수예요. */
+function runSearch(query) {
+    searchQuery = query.trim();
+    if (!searchQuery) {
+        toastr.warning('검색어를 입력해주세요.');
+        return;
+    }
+
+    searchResults = findMatches(searchQuery);
+    searchIndex = 0;
+
+    const status = document.getElementById('smm-search-status');
+    if (searchResults.length === 0) {
+        clearHighlight();
+        if (status) status.textContent = '0 / 0';
+        toastr.info('검색 결과가 없어요.');
+        return;
+    }
+
+    showCurrentSearchResult();
+}
+
+function searchPrev() {
+    if (searchResults.length === 0) return;
+    searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length;
+    showCurrentSearchResult();
+}
+
+function searchNext() {
+    if (searchResults.length === 0) return;
+    searchIndex = (searchIndex + 1) % searchResults.length;
+    showCurrentSearchResult();
+}
+
+/** 실제로 텍스트를 바꾸고, 화면 갱신 + 저장까지 처리해요. */
+async function performReplace(replaceText, applyToAll) {
+    if (searchResults.length === 0) {
+        toastr.warning('먼저 검색을 실행해주세요.');
+        return;
+    }
+
+    const targetIds = applyToAll ? searchResults : [searchResults[searchIndex]];
+    const regex = new RegExp(escapeRegExp(searchQuery), 'gi');
+
+    targetIds.forEach((mesId) => {
+        const mes = context.chat[mesId];
+        if (!mes || !mes.mes) return;
+        mes.mes = mes.mes.replace(regex, replaceText);
+        updateMessageBlock(mesId, mes);
+    });
+
+    await saveChat();
+    toastr.success(applyToAll
+        ? `${targetIds.length}개 메시지를 모두 바꿨어요.`
+        : '현재 메시지를 바꿨어요.');
+
+    closeSearchBar();
+}
+
+function closeSearchBar() {
+    clearHighlight();
+    const bar = document.getElementById('smm-searchbar');
+    if (bar) bar.remove();
+    searchResults = [];
+    searchIndex = -1;
+}
+
+/** 검색창(입력 + 이전/다음 + 바꾸기)을 화면에 만들어요. */
+function createSearchBar() {
+    if (document.getElementById('smm-searchbar')) {
+        return;
+    }
+
+    const bar = document.createElement('div');
+    bar.id = 'smm-searchbar';
+    bar.innerHTML = `
+        <div class="smm-search-row">
+            <input type="text" id="smm-search-input" placeholder="찾을 단어" />
+            <button class="smm-scroll-btn" id="smm-search-go" title="검색"><i class="fa-solid fa-magnifying-glass"></i></button>
+            <button class="smm-scroll-btn" id="smm-search-prev" title="이전 결과"><i class="fa-solid fa-angle-up"></i></button>
+            <span id="smm-search-status">0 / 0</span>
+            <button class="smm-scroll-btn" id="smm-search-next" title="다음 결과"><i class="fa-solid fa-angle-down"></i></button>
+            <button class="smm-scroll-btn" id="smm-search-replace-toggle" title="바꾸기"><i class="fa-solid fa-repeat"></i></button>
+            <button class="smm-scroll-btn smm-scroll-close" id="smm-search-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="smm-search-row" id="smm-search-replace-row" style="display:none;">
+            <input type="text" id="smm-replace-input" placeholder="바꿀 단어" />
+            <label class="smm-search-all-label">
+                <input type="checkbox" id="smm-replace-all" /> 전체
+            </label>
+            <button class="smm-scroll-btn smm-danger-button" id="smm-replace-confirm" title="바꾸기 확인"><i class="fa-solid fa-check"></i></button>
+        </div>
+    `;
+
+    document.body.appendChild(bar);
+
+    const input = bar.querySelector('#smm-search-input');
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') runSearch(input.value);
+    });
+
+    bar.querySelector('#smm-search-go').addEventListener('click', () => runSearch(input.value));
+    bar.querySelector('#smm-search-prev').addEventListener('click', searchPrev);
+    bar.querySelector('#smm-search-next').addEventListener('click', searchNext);
+    bar.querySelector('#smm-search-close').addEventListener('click', closeSearchBar);
+
+    bar.querySelector('#smm-search-replace-toggle').addEventListener('click', () => {
+        const row = bar.querySelector('#smm-search-replace-row');
+        row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+    });
+
+    bar.querySelector('#smm-replace-confirm').addEventListener('click', () => {
+        const replaceText = bar.querySelector('#smm-replace-input').value;
+        const applyToAll = bar.querySelector('#smm-replace-all').checked;
+        performReplace(replaceText, applyToAll);
+    });
+
+    input.focus();
 }
 
 /**
