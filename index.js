@@ -170,9 +170,23 @@ function getLastMesId() {
     return context.chat.length - 1;
 }
 
-/** 특정 번호의 메시지로 화면을 부드럽게 스크롤해요. */
-function scrollToMesId(mesId) {
-    const target = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
+/** 특정 번호의 메시지로 화면을 부드럽게 스크롤해요.
+ *  화면에 아직 안 그려진(=로딩 안 된) 메시지라면, 채팅 맨 위로 스크롤해서
+ *  실리태번이 이전 메시지를 더 불러오게 만든 다음 다시 찾아봐요. */
+async function scrollToMesId(mesId) {
+    const chatEl = document.getElementById('chat');
+    let target = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
+    let attempts = 0;
+
+    while (!target && attempts < 30) {
+        if (chatEl) {
+            chatEl.scrollTop = 0; // 맨 위로 스크롤 → 실리태번이 이전 메시지를 추가로 불러와요
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        target = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
+        attempts += 1;
+    }
+
     if (!target) {
         toastr.warning('해당 번호의 메시지를 찾을 수 없어요.');
         return;
@@ -185,11 +199,19 @@ function goFirst() { scrollToMesId(0); }
 function goLast() { scrollToMesId(getLastMesId()); }
 function goPrev() {
     const base = currentMesId === null ? getLastMesId() : currentMesId;
-    scrollToMesId(Math.max(0, base - 1));
+    if (base <= 0) {
+        toastr.info('첫 번째 메시지예요.');
+        return;
+    }
+    scrollToMesId(base - 1);
 }
 function goNext() {
     const base = currentMesId === null ? 0 : currentMesId;
-    scrollToMesId(Math.min(getLastMesId(), base + 1));
+    if (base >= getLastMesId()) {
+        toastr.info('마지막 메시지예요.');
+        return;
+    }
+    scrollToMesId(base + 1);
 }
 function goToNumber(rawValue) {
     const n = parseInt(rawValue, 10);

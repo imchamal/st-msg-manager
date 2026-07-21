@@ -97,10 +97,20 @@
 
 #smm-go-input {
     width: 50px;
-    text-align: center;
+    box-sizing: border-box;
+    text-align: center !important;
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 2px 4px;
+    -moz-appearance: textfield;
+}
+
+/* 크롬/사파리에서 숫자 입력창 옆에 뜨는 위아래 화살표를 없애요.
+   화살표가 있으면 그만큼 오른쪽으로 쏠려 보여서 가운데 정렬이 깨져요. */
+#smm-go-input::-webkit-outer-spin-button,
+#smm-go-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 /* 위험한 동작(삭제 등)에 쓸 공용 클래스.
