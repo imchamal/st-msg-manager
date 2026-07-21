@@ -386,12 +386,12 @@
     font-size: 16px;
 }
 
-#smm-swipe-detail-toolbar {
+#smm-swipe-detail-footer {
     padding: 8px 14px;
-    border-bottom: 1px solid #eee;
+    border-top: 1px solid #eee;
 }
 
-#smm-swipe-detail-toolbar .smm-scroll-btn {
+#smm-swipe-detail-footer .smm-scroll-btn {
     width: 100%;
     display: flex;
     align-items: center;
@@ -422,34 +422,18 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 4px;
 }
 
 .smm-swipe-version-badge {
     font-size: 12px;
     font-weight: 600;
     color: #555;
+    flex-shrink: 0;
 }
 
-.smm-swipe-current-tag {
-    font-size: 11px;
-    font-weight: 600;
-    color: #ffffff;
-    background-color: var(--SmartThemeQuoteColor, #3a8ee6);
-    border-radius: 8px;
-    padding: 1px 7px;
-}
-
-.smm-swipe-expand-btn {
-    margin-left: auto;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #999;
-    font-size: 13px;
-}
-
-.smm-swipe-detail-text {
+.smm-swipe-detail-preview {
+    flex: 1;
+    min-width: 0;
     font-size: 13px;
     color: #555;
     overflow: hidden;
@@ -457,26 +441,46 @@
     white-space: nowrap;
 }
 
+.smm-swipe-adopt-btn {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 3px 9px;
+    border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
+    background-color: #ffffff;
+    color: var(--SmartThemeQuoteColor, #3a8ee6);
+    cursor: pointer;
+}
+
+.smm-swipe-adopt-btn.smm-swipe-adopt-current {
+    background-color: var(--SmartThemeQuoteColor, #3a8ee6);
+    color: #ffffff;
+    cursor: default;
+}
+
+.smm-swipe-delete-icon-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #e33a3a;
+    font-size: 13px;
+}
+
+.smm-swipe-expand-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    font-size: 13px;
+}
+
 .smm-swipe-detail-text-expanded {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #555;
     white-space: pre-wrap;
     max-height: 200px;
     overflow-y: auto;
-}
-
-.smm-swipe-detail-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-    margin-top: 6px;
-}
-
-.smm-swipe-detail-actions .smm-scroll-btn {
-    border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
-    border-radius: 8px;
-    padding: 4px 10px;
-    font-size: 12px;
-}
-
-.smm-swipe-detail-actions .smm-danger-button {
-    border-color: #e33a3a;
-}

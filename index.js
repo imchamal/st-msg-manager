@@ -937,9 +937,11 @@ function renderSwipeDetailRows() {
 
     body.innerHTML = '';
 
-    mes.swipes.forEach((swipeText, i) => {
+mes.swipes.forEach((swipeText, i) => {
         const isCurrent = i === mes.swipe_id;
         const isExpanded = swipeExpandedSet.has(i);
+        // 펼쳤을 때 첫 문단이 들여쓰기돼 보이는 문제 방지: 맨 앞 공백/줄바꿈만 제거해요.
+        const fullText = (swipeText || '').replace(/^\s+/, '');
 
         const row = document.createElement('div');
         row.className = 'smm-swipe-detail-row';
@@ -948,26 +950,25 @@ function renderSwipeDetailRows() {
         row.innerHTML = `
             <div class="smm-swipe-detail-top">
                 <span class="smm-swipe-version-badge">버전 ${i + 1}</span>
-                ${isCurrent ? '<span class="smm-swipe-current-tag">현재</span>' : ''}
+                <span class="smm-swipe-detail-preview">${isExpanded ? '' : getMessagePreview(swipeText)}</span>
+                <button class="smm-swipe-adopt-btn ${isCurrent ? 'smm-swipe-adopt-current' : ''}" ${isCurrent ? 'disabled' : ''}>
+                    ${isCurrent ? '현재' : '채택'}
+                </button>
+                <button class="smm-swipe-delete-icon-btn" title="삭제">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
                 <button class="smm-swipe-expand-btn" title="펼치기/접기">
                     <i class="fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
                 </button>
             </div>
-            <div class="smm-swipe-detail-text ${isExpanded ? 'smm-swipe-detail-text-expanded' : ''}">
-                ${isExpanded ? (swipeText || '') : getMessagePreview(swipeText)}
-            </div>
-            <div class="smm-swipe-detail-actions">
-                ${isCurrent ? '' : '<button class="smm-scroll-btn smm-swipe-adopt-btn">채택</button>'}
-                <button class="smm-scroll-btn smm-danger-button smm-swipe-delete-btn">삭제</button>
-            </div>
+            ${isExpanded ? `<div class="smm-swipe-detail-text-expanded">${fullText}</div>` : ''}
         `;
 
         row.querySelector('.smm-swipe-expand-btn').addEventListener('click', () => toggleSwipeExpand(i));
-        const adoptBtn = row.querySelector('.smm-swipe-adopt-btn');
-        if (adoptBtn) {
-            adoptBtn.addEventListener('click', () => switchToSwipe(currentSwipeDetailMesId, i));
+        if (!isCurrent) {
+            row.querySelector('.smm-swipe-adopt-btn').addEventListener('click', () => switchToSwipe(currentSwipeDetailMesId, i));
         }
-        row.querySelector('.smm-swipe-delete-btn').addEventListener('click', () => deleteSwipe(currentSwipeDetailMesId, i));
+        row.querySelector('.smm-swipe-delete-icon-btn').addEventListener('click', () => deleteSwipe(currentSwipeDetailMesId, i));
 
         body.appendChild(row);
     });
@@ -989,12 +990,12 @@ function openSwipeDetailPanel(mesId) {
                 <span id="smm-list-title">#${mesId} 스와이프 (${mes.swipes.length}개)</span>
                 <button id="smm-swipe-detail-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="smm-swipe-detail-toolbar">
+            <div id="smm-swipe-detail-body"></div>
+            <div id="smm-swipe-detail-footer">
                 <button id="smm-swipe-keep-only-btn" class="smm-scroll-btn smm-danger-button">
                     <i class="fa-solid fa-broom"></i> 현재 버전만 남기고 삭제
                 </button>
             </div>
-            <div id="smm-swipe-detail-body"></div>
         </div>
     `;
 
