@@ -11,8 +11,8 @@
 /* 화면에 떠있는 원형 플로팅 버튼 */
 #smm-floating-button {
     position: fixed;
-    right: 12px;
-    bottom: 72px;
+    right: 20px;
+    bottom: 90px;
     width: 52px;
     height: 52px;
     border-radius: 50%;
@@ -107,7 +107,7 @@
 }
 
 .smm-scroll-btn.smm-scroll-close {
-    color: var(--SmartThemeQuoteColor, #3a8ee6) !important;
+    color: #e33a3a;
 }
 
 #smm-go-input {
@@ -243,7 +243,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--SmartThemeQuoteColor, #3a8ee6) !important;
+    color: #999;
     font-size: 16px;
 }
 
@@ -284,7 +284,6 @@
 
 .smm-list-preview {
     flex: 1;
-    min-width: 0;        /* 이게 없으면 flex 아이템이 내용 너비까지만 줄어들어요 */
     font-size: 13px;
     color: #555;
     overflow: hidden;
@@ -431,15 +430,12 @@
 }
 
 #smm-swipe-back,
-#smm-swipe-detail-close,
-#smm-swipe-list-close {
+#smm-swipe-detail-close {
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--SmartThemeQuoteColor, #3a8ee6) !important;
+    color: #999;
     font-size: 16px;
-    box-shadow: none;
-    padding: 0;
 }
 
 #smm-swipe-detail-footer {
