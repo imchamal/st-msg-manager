@@ -55,21 +55,124 @@ function getSettings() {
  * 버튼만 화면에 띄우고 누르면 콘솔에 로그만 찍도록 해뒀어요.
  * (원형 메뉴, 각 기능들은 다음 단계에서 하나씩 채울 거예요)
  */
+/** localStorage에서 버튼 위치를 불러와요. */
+function loadFabPosition() {
+    try {
+        const s = localStorage.getItem('smm-fab-pos');
+        return s ? JSON.parse(s) : null;
+    } catch (e) { return null; }
+}
+
+/** 버튼 위치를 localStorage에 저장해요. */
+function saveFabPosition(left, top) {
+    try { localStorage.setItem('smm-fab-pos', JSON.stringify({ left, top })); } catch (e) {}
+}
+
 function createFloatingButton() {
-    // 혹시 이미 버튼이 있다면 중복으로 만들지 않도록 방지해요.
-    if (document.getElementById('smm-floating-button')) {
-        return;
-    }
+    if (document.getElementById('smm-floating-button')) return;
 
     const button = document.createElement('div');
     button.id = 'smm-floating-button';
     button.title = '메시지 매니저';
     button.innerHTML = '<i class="fa-solid fa-list-check"></i>';
 
-    button.addEventListener('click', (event) => {
-        event.stopPropagation();
+    // ---- 저장된 위치 복원 (화면 밖으로 나가지 않도록 클램프) ----
+    const saved = loadFabPosition();
+    if (saved) {
+        const sz = 52;
+        const l = Math.max(0, Math.min(saved.left, window.innerWidth  - sz));
+        const t = Math.max(0, Math.min(saved.top,  window.innerHeight - sz));
+        button.style.left   = l + 'px';
+        button.style.top    = t + 'px';
+        button.style.right  = 'auto';
+        button.style.bottom = 'auto';
+    }
+
+    // ---- 드래그 (마우스 + 터치 공통) ----
+    let isDragging  = false;
+    let wasDragging = false;
+    let dragStartX, dragStartY, dragStartLeft, dragStartTop;
+
+    function initDrag(clientX, clientY) {
+        const rect = button.getBoundingClientRect();
+        dragStartX    = clientX;
+        dragStartY    = clientY;
+        dragStartLeft = rect.left;
+        dragStartTop  = rect.top;
+        // CSS 기준을 right/bottom → left/top 으로 전환
+        button.style.left   = rect.left + 'px';
+        button.style.top    = rect.top  + 'px';
+        button.style.right  = 'auto';
+        button.style.bottom = 'auto';
+        isDragging = false;
+    }
+
+    function moveDrag(clientX, clientY) {
+        const dx = clientX - dragStartX;
+        const dy = clientY - dragStartY;
+        if (!isDragging && Math.hypot(dx, dy) < 5) return; // 미세 떨림 무시
+        isDragging = true;
+        button.classList.add('smm-fab-dragging');
+        closeRadialMenu();
+        const sz   = button.offsetWidth;
+        const newL = Math.max(0, Math.min(window.innerWidth  - sz, dragStartLeft + dx));
+        const newT = Math.max(0, Math.min(window.innerHeight - sz, dragStartTop  + dy));
+        button.style.left = newL + 'px';
+        button.style.top  = newT + 'px';
+    }
+
+    function endDrag() {
+        button.classList.remove('smm-fab-dragging');
+        if (isDragging) {
+            saveFabPosition(parseFloat(button.style.left), parseFloat(button.style.top));
+            wasDragging = true;
+        }
+        isDragging = false;
+        resetFade();
+    }
+
+    // 마우스 드래그
+    button.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        initDrag(e.clientX, e.clientY);
+        const onMove = (e) => moveDrag(e.clientX, e.clientY);
+        const onUp   = ()  => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); endDrag(); };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup',   onUp);
+    });
+
+    // 터치 드래그
+    button.addEventListener('touchstart', (e) => {
+        button.classList.remove('smm-faded');
+        clearTimeout(button._fadeTimer);
+        const t = e.touches[0];
+        initDrag(t.clientX, t.clientY);
+    }, { passive: true });
+
+    button.addEventListener('touchmove', (e) => {
+        const t = e.touches[0];
+        moveDrag(t.clientX, t.clientY);
+    }, { passive: true });
+
+    button.addEventListener('touchend', () => endDrag());
+
+    // 클릭 (드래그 직후는 무시)
+    button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (wasDragging) { wasDragging = false; return; }
         toggleRadialMenu();
     });
+
+    // ---- 자동 페이드 ----
+    function resetFade() {
+        button.classList.remove('smm-faded');
+        clearTimeout(button._fadeTimer);
+        button._fadeTimer = setTimeout(() => button.classList.add('smm-faded'), 4000);
+    }
+    button.addEventListener('mouseenter', () => { clearTimeout(button._fadeTimer); button.classList.remove('smm-faded'); });
+    button.addEventListener('mouseleave', resetFade);
+    resetFade(); // 처음 생성 시 타이머 시작
 
     document.body.appendChild(button);
 }
@@ -300,28 +403,38 @@ function closeRadialMenu() {
     }
 }
 
-/** 원형 메뉴(4개 아이콘)를 화면에 부채꼴 모양으로 펼쳐요. */
+/** 원형 메뉴(4개 아이콘)를 화면에 부채꼴 모양으로 펼쳐요.
+ *  버튼이 어디에 있어도 그 위치를 기준으로 아이템을 배치해요. */
 function createRadialMenu() {
-    if (document.getElementById('smm-radial-menu')) {
-        return;
-    }
+    if (document.getElementById('smm-radial-menu')) return;
 
-    const radius = 90; // 플로팅 버튼 중심에서 얼마나 멀리 떨어뜨릴지 (픽셀)
-    const menu = document.createElement('div');
-    menu.id = 'smm-radial-menu';
+    const button = document.getElementById('smm-floating-button');
+    const rect   = button.getBoundingClientRect();
+    const cx     = rect.left + rect.width  / 2; // 버튼 중심 x
+    const cy     = rect.top  + rect.height / 2; // 버튼 중심 y
 
-    getRadialMenuItems().forEach((item) => {
+    const radius = 90;
+    const menu   = document.createElement('div');
+    menu.id      = 'smm-radial-menu';
+
+    getRadialMenuItems().forEach((item, i) => {
         const rad = (item.angle * Math.PI) / 180;
-        const x = Math.cos(rad) * radius; // 왼쪽으로 이동할 거리
-        const y = Math.sin(rad) * radius; // 위쪽으로 이동할 거리
+        const x   = Math.cos(rad) * radius;
+        const y   = Math.sin(rad) * radius;
 
         const btn = document.createElement('div');
         btn.className = 'smm-radial-item';
-        btn.title = item.title;
+        btn.id        = item.id;
+        btn.title     = item.title;
         btn.innerHTML = `<i class="fa-solid ${item.icon}"></i>`;
-        // 플로팅 버튼과 같은 기준(right/bottom)으로 위치를 계산해요.
-        btn.style.right = `${20 - x}px`;
-        btn.style.bottom = `${90 + y}px`;
+
+        // left/top 기준으로 버튼 중심에서 퍼져나가는 위치 계산
+        // y는 화면에서 아래가 +이므로 반전(-y)해야 기존과 같은 방향이 나와요
+        btn.style.left   = `${cx + x - 21}px`;
+        btn.style.top    = `${cy - y - 21}px`;
+        btn.style.right  = 'auto';
+        btn.style.bottom = 'auto';
+        btn.style.animationDelay = `${i * 35}ms`;
 
         btn.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -333,7 +446,6 @@ function createRadialMenu() {
 
     document.body.appendChild(menu);
 
-    // 메뉴 바깥을 클릭하면 자동으로 닫히게 해요.
     setTimeout(() => {
         document.addEventListener('click', closeRadialMenu, { once: true });
     }, 0);
