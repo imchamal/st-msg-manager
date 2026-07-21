@@ -536,3 +536,82 @@
     white-space: pre-wrap;
     max-height: 200px;
     overflow-y: auto;
+}
+
+/* 드래그 텍스트 수정 - 1단계: 선택 영역 아래에 뜨는 연필 아이콘 툴바 */
+#smm-drag-edit-toolbar {
+    z-index: 10000;
+    background-color: #ffffff;
+    border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
+    border-radius: 20px;
+    padding: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    display: flex;
+    gap: 2px;
+}
+
+.smm-drag-edit-icon-btn {
+    background: none;
+    border: none;
+    color: var(--SmartThemeQuoteColor, #3a8ee6);
+    font-size: 14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.smm-drag-edit-icon-btn:hover {
+    background-color: rgba(58, 142, 230, 0.1);
+}
+
+/* 드래그 텍스트 수정 - 2단계: 실제로 텍스트를 고치는 입력창 */
+#smm-drag-edit-popup {
+    z-index: 10000;
+    width: min(260px, 80vw);
+    background-color: #ffffff;
+    border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#smm-drag-edit-input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 60px;
+    max-height: 160px;
+    resize: vertical;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.smm-drag-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.smm-drag-edit-actions .smm-scroll-btn {
+    border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
+    border-radius: 8px;
+    padding: 4px 10px;
+}
+
+.smm-drag-edit-actions #smm-drag-edit-confirm {
+    color: var(--SmartThemeQuoteColor, #3a8ee6) !important;
+}
+
+.smm-drag-edit-actions #smm-drag-edit-cancel {
+    color: #999 !important;
+    border-color: #ddd !important;
+}

@@ -1060,6 +1060,224 @@ function openSwipeDetailPanel(mesId) {
     renderSwipeDetailRows();
 }
 
+// ============================================================
+// 기능 6: 드래그 텍스트 빠른 수정
+// ------------------------------------------------------------
+// 메시지 안의 텍스트를 드래그(선택)하면, 선택 영역 "아래"에
+// 연필 아이콘 하나짜리 작은 툴바가 떠요. (나중에 다른 아이콘도
+// 여기 옆에 추가할 수 있게 만들어뒀어요)
+// 연필을 누르면 2단계로, 선택했던 텍스트가 담긴 입력창이 뜨고
+// 확인을 누르면 검색/바꾸기 때와 똑같은 방식(updateMessageBlock으로
+// 화면을 다시 그리고, saveChat()으로 저장)으로 반영돼요.
+// ============================================================
+
+let dragEditRange = null;       // 선택했던 범위를 복제해서 저장해둬요 (버튼 클릭 후에도 쓰려고)
+let dragEditMesId = null;       // 어떤 메시지 안에서 선택했는지
+let dragEditSelectedText = '';  // 선택했던 원본 텍스트 그대로
+let dragEditPopupOpen = false;  // 2단계 입력창이 열려있는 동안은 새 선택 감지를 멈춰요
+let dragSelectionDebounceTimer = null;
+
+function closeDragEditToolbar() {
+    document.getElementById('smm-drag-edit-toolbar')?.remove();
+}
+
+function closeDragEditPopup() {
+    document.getElementById('smm-drag-edit-popup')?.remove();
+}
+
+function closeDragEditAll() {
+    closeDragEditToolbar();
+    closeDragEditPopup();
+    dragEditPopupOpen = false;
+    dragEditRange = null;
+    dragEditMesId = null;
+    dragEditSelectedText = '';
+    window.getSelection()?.removeAllRanges();
+}
+
+/** container 안에서 targetNode/targetOffset이 "글자 몇 번째"인지 계산해요. */
+function getAbsoluteOffsetInContainer(container, targetNode, targetOffset) {
+    let offset = 0;
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+        if (node === targetNode) {
+            return offset + targetOffset;
+        }
+        offset += node.textContent.length;
+    }
+    return -1;
+}
+
+/** 선택한 텍스트가, 화면에 보이는 메시지 전체 텍스트 중 몇 번째(0부터)로 등장하는지 계산해요.
+ *  (검색/바꾸기의 "occurrence" 방식과 동일한 원리예요) */
+function computeOccurrenceIndex(mesId, selectedText, range) {
+    const mesEl = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
+    const container = mesEl?.querySelector('.mes_text');
+    if (!container) return -1;
+
+    const startOffset = getAbsoluteOffsetInContainer(container, range.startContainer, range.startOffset);
+    if (startOffset === -1) return -1;
+
+    const before = container.textContent.slice(0, startOffset);
+    const regex = new RegExp(escapeRegExp(selectedText), 'g');
+    let count = 0;
+    while (regex.exec(before) !== null) count++;
+    return count;
+}
+
+/** 화면 좌표(rect) 바로 아래쪽에 요소를 배치해요. 화면 밖으로 나가면 살짝 안쪽으로 보정해요. */
+function positionBelowRect(el, rect) {
+    const gap = 8;
+    el.style.position = 'fixed';
+    el.style.top = `${rect.bottom + gap}px`;
+    el.style.left = `${rect.left + rect.width / 2}px`;
+    el.style.transform = 'translateX(-50%)';
+
+    requestAnimationFrame(() => {
+        const box = el.getBoundingClientRect();
+        if (box.left < 4) {
+            el.style.left = `${4 + box.width / 2}px`;
+        } else if (box.right > window.innerWidth - 4) {
+            el.style.left = `${window.innerWidth - 4 - box.width / 2}px`;
+        }
+        if (box.bottom > window.innerHeight - 4) {
+            // 아래쪽에 공간이 없으면 이번만 선택 영역 "위"로 띄워요.
+            el.style.top = `${rect.top - box.height - gap}px`;
+        }
+    });
+}
+
+/** 1단계: 선택 영역 아래에 연필 아이콘 툴바를 띄워요. */
+function showDragEditToolbar(rect) {
+    closeDragEditToolbar();
+
+    const bar = document.createElement('div');
+    bar.id = 'smm-drag-edit-toolbar';
+    bar.innerHTML = `
+        <button class="smm-drag-edit-icon-btn" id="smm-drag-edit-pencil" title="선택한 부분 수정">
+            <i class="fa-solid fa-pen"></i>
+        </button>
+    `;
+    document.body.appendChild(bar);
+    positionBelowRect(bar, rect);
+
+    document.getElementById('smm-drag-edit-pencil').addEventListener('click', () => {
+        openDragEditPopup(rect);
+    });
+}
+
+/** 2단계: 선택했던 텍스트를 고칠 수 있는 입력창을 띄워요. */
+function openDragEditPopup(rect) {
+    closeDragEditToolbar();
+    closeDragEditPopup();
+    dragEditPopupOpen = true;
+
+    const popup = document.createElement('div');
+    popup.id = 'smm-drag-edit-popup';
+    popup.innerHTML = `
+        <textarea id="smm-drag-edit-input"></textarea>
+        <div class="smm-drag-edit-actions">
+            <button class="smm-scroll-btn" id="smm-drag-edit-cancel" title="취소"><i class="fa-solid fa-xmark"></i></button>
+            <button class="smm-scroll-btn" id="smm-drag-edit-confirm" title="확인"><i class="fa-solid fa-check"></i></button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+    positionBelowRect(popup, rect);
+
+    const input = popup.querySelector('#smm-drag-edit-input');
+    input.value = dragEditSelectedText;
+    input.focus();
+    input.select();
+
+    popup.querySelector('#smm-drag-edit-cancel').addEventListener('click', closeDragEditAll);
+    popup.querySelector('#smm-drag-edit-confirm').addEventListener('click', () => {
+        performDragEdit(input.value);
+    });
+}
+
+/** 실제로 원본 메시지(context.chat) 텍스트를 바꾸고, 화면 갱신 + 저장까지 처리해요. */
+async function performDragEdit(newText) {
+    if (dragEditMesId === null || !dragEditRange || !dragEditSelectedText) {
+        closeDragEditAll();
+        return;
+    }
+
+    const mes = context.chat[dragEditMesId];
+    if (!mes || typeof mes.mes !== 'string') {
+        closeDragEditAll();
+        return;
+    }
+
+    const occurrenceIndex = computeOccurrenceIndex(dragEditMesId, dragEditSelectedText, dragEditRange);
+    const regex = new RegExp(escapeRegExp(dragEditSelectedText), 'g');
+    const matchCount = (mes.mes.match(regex) || []).length;
+
+    // 마크다운 서식(**, * 등) 때문에 화면 텍스트와 원본 텍스트가 다르면
+    // 정확히 같은 자리를 못 찾을 수 있어요. 이럴 땐 억지로 바꾸지 않고 알려줘요.
+    if (occurrenceIndex === -1 || occurrenceIndex >= matchCount) {
+        toastr.warning('마크다운 서식 등의 이유로 원본에서 같은 부분을 정확히 찾지 못했어요.');
+        closeDragEditAll();
+        return;
+    }
+
+    mes.mes = replaceNthOccurrence(mes.mes, regex, occurrenceIndex, newText);
+    updateMessageBlock(dragEditMesId, mes);
+    await saveChat();
+    toastr.success('수정했어요.');
+    closeDragEditAll();
+}
+
+/** 문서 안의 텍스트 선택 상태가 바뀔 때마다(드래그 도중 포함) 조금 있다가 한 번만 확인해요. */
+function scheduleSelectionCheck() {
+    if (dragEditPopupOpen) return;
+    clearTimeout(dragSelectionDebounceTimer);
+    dragSelectionDebounceTimer = setTimeout(checkTextSelection, 150);
+}
+
+function checkTextSelection() {
+    if (dragEditPopupOpen) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        closeDragEditToolbar();
+        return;
+    }
+
+    const selectedText = selection.toString();
+    if (!selectedText.trim()) {
+        closeDragEditToolbar();
+        return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const anchorNode = range.commonAncestorContainer;
+    const anchorEl = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode;
+
+    const mesEl = anchorEl?.closest?.('.mes[mesid]');
+    const textContainer = anchorEl?.closest?.('.mes_text');
+    if (!mesEl || !textContainer) {
+        closeDragEditToolbar();
+        return;
+    }
+
+    dragEditRange = range.cloneRange();
+    dragEditMesId = Number(mesEl.getAttribute('mesid'));
+    dragEditSelectedText = selectedText;
+
+    showDragEditToolbar(range.getBoundingClientRect());
+}
+
+document.addEventListener('selectionchange', scheduleSelectionCheck);
+
+// 채팅을 스크롤하거나(캡처 단계라 #chat 내부 스크롤도 잡혀요), 툴바/입력창 바깥을 클릭하면 닫아요.
+document.addEventListener('scroll', () => closeDragEditAll(), true);
+document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('#smm-drag-edit-toolbar, #smm-drag-edit-popup')) {
+        closeDragEditAll();
+    }
+});
+
 /**
  * 확장이 실제로 시작될 때 실행되는 함수예요.
  * 여기서 설정을 불러오고, 화면에 버튼을 만들어요.
