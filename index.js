@@ -216,7 +216,7 @@ function createScrollBar() {
         <button class="smm-scroll-btn smm-scroll-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
     `;
 
-    const [firstBtn, prevBtn, , goBtn, nextBtn, lastBtn, closeBtn] = bar.querySelectorAll('button');
+    const [firstBtn, prevBtn, goBtn, nextBtn, lastBtn, closeBtn] = bar.querySelectorAll('button');
     firstBtn.addEventListener('click', goFirst);
     prevBtn.addEventListener('click', goPrev);
     nextBtn.addEventListener('click', goNext);
