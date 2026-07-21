@@ -1,0 +1,55 @@
+/* ============================================================
+   메시지 매니저 (Message Manager) - style.css
+   ------------------------------------------------------------
+   디자인 원칙:
+   1) 무조건 흰색 배경, 심플한 iOS 느낌
+   2) 포인트 컬러는 하드코딩하지 않고, 실리태번 테마 변수를 사용
+      → 사용자가 테마를 바꾸면 우리 확장 색상도 자동으로 바뀜
+   3) 삭제 같은 위험한 동작만 빨간색 계열로 고정
+   ============================================================ */
+
+/* 화면 우측 하단에 떠있는 원형 버튼 */
+#smm-floating-button {
+    position: fixed;
+    right: 20px;
+    bottom: 90px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+
+    /* 흰 배경 고정 */
+    background-color: #ffffff;
+
+    /* 포인트 컬러: 실리태번 테마의 색상 변수를 그대로 사용
+       (정확한 변수명은 실제 화면에서 테스트하며 미세 조정할 예정이에요) */
+    color: var(--SmartThemeQuoteColor, #3a8ee6);
+    border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 9999;
+
+    /* iOS 느낌의 은은한 그림자 */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+
+    transition: transform 0.15s ease;
+}
+
+#smm-floating-button:hover {
+    transform: scale(1.05);
+}
+
+#smm-floating-button:active {
+    transform: scale(0.95);
+}
+
+/* 위험한 동작(삭제 등)에 쓸 공용 클래스.
+   나중에 삭제 버튼 만들 때 이 클래스만 붙이면 빨간색이 돼요. */
+.smm-danger-button {
+    color: #e33a3a !important;
+    border-color: #e33a3a !important;
+}
