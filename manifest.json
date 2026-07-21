@@ -4,7 +4,7 @@
     "js": "index.js",
     "css": "style.css",
     "author": "나 (초보 바이브코더)",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "homePage": "https://github.com/your-username/silly-message-manager",
     "auto_update": true
 }

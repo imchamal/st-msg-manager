@@ -53,3 +53,12 @@
     color: #e33a3a !important;
     border-color: #e33a3a !important;
 }
+
+/* mes_button에 추가되는 빠른 삭제 아이콘 (위험 동작 = 빨간색) */
+.smm-quick-delete {
+    color: #e33a3a !important;
+}
+
+.smm-quick-delete:hover {
+    opacity: 0.7;
+}
