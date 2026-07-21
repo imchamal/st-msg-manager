@@ -178,113 +178,170 @@
     color: #ffffff;
 }
 
-/* 메시지 목록 관리 모달 */
-.smm-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
+// ============================================================
+// 기능 4: 메시지 목록 관리 (체크박스로 선택 → 삭제/숨기기)
+// ------------------------------------------------------------
+// 원형 메뉴의 "목록" 아이콘을 누르면 화면 중앙에 리스트 창(모달)이 떠요.
+// 체크박스로 여러 메시지를 고른 다음, 한 번에 삭제하거나
+// 숨기기/숨김해제 할 수 있어요.
+// ============================================================
+
+let listSelectedIds = new Set(); // 지금 체크된 메시지 번호들
+
+/** 메시지 텍스트에서 HTML 태그를 떼어내고, 한 줄 미리보기(최대 40자)를 만들어요. */
+function getMessagePreview(mesText) {
+    const temp = document.createElement('div');
+    temp.innerHTML = mesText || '';
+    const plain = (temp.textContent || '').replace(/\s+/g, ' ').trim();
+    return plain.length > 40 ? `${plain.slice(0, 40)}...` : plain;
 }
 
-.smm-modal {
-    background-color: #ffffff;
-    border-radius: 16px;
-    width: min(480px, 90vw);
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
+/** 리스트 안의 행(row)들을 현재 context.chat 기준으로 다시 그려요. */
+function renderListRows() {
+    const listBody = document.getElementById('smm-list-body');
+    if (!listBody) return;
+
+    listBody.innerHTML = '';
+
+    context.chat.forEach((mes, idx) => {
+        const row = document.createElement('div');
+        row.className = 'smm-list-row';
+        if (mes.is_system) {
+            row.classList.add('smm-list-row-hidden');
+        }
+
+        const checked = listSelectedIds.has(idx) ? 'checked' : '';
+        row.innerHTML = `
+            <input type="checkbox" class="smm-list-checkbox" data-mesid="${idx}" ${checked} />
+            <span class="smm-list-index">#${idx}</span>
+            <span class="smm-list-name">${mes.name || ''}</span>
+            <span class="smm-list-preview">${getMessagePreview(mes.mes)}</span>
+        `;
+
+        row.querySelector('.smm-list-checkbox').addEventListener('change', (e) => {
+            const id = Number(e.target.dataset.mesid);
+            if (e.target.checked) {
+                listSelectedIds.add(id);
+            } else {
+                listSelectedIds.delete(id);
+            }
+            updateSelectAllCheckbox();
+        });
+
+        listBody.appendChild(row);
+    });
+
+    updateSelectAllCheckbox();
 }
 
-.smm-modal-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    border-bottom: 1px solid #eee;
+/** 상단의 "전체 선택" 체크박스 상태를 지금 선택 개수에 맞춰 갱신해요. */
+function updateSelectAllCheckbox() {
+    const selectAll = document.getElementById('smm-list-select-all');
+    if (!selectAll) return;
+    const total = context.chat.length;
+    selectAll.checked = total > 0 && listSelectedIds.size === total;
 }
 
-.smm-list-tabs {
-    display: flex;
-    gap: 4px;
-    flex: 1;
-    justify-content: center;
+/** 전체 선택 체크박스를 눌렀을 때: 전체선택 ↔ 전체해제로 토글해요. */
+function toggleSelectAllRows() {
+    const total = context.chat.length;
+    if (listSelectedIds.size === total) {
+        listSelectedIds.clear();
+    } else {
+        listSelectedIds = new Set(context.chat.map((_, idx) => idx));
+    }
+    renderListRows();
 }
 
-.smm-list-tab {
-    background: none;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 13px;
-    color: #888;
-    cursor: pointer;
+/** 선택된 메시지들을 전부 삭제해요. (번호가 밀리지 않도록 큰 번호부터 지워요) */
+async function deleteSelectedMessages() {
+    if (listSelectedIds.size === 0) {
+        toastr.warning('선택된 메시지가 없어요.');
+        return;
+    }
+
+    const result = await Popup.show.confirm(
+        '선택 삭제',
+        `선택한 ${listSelectedIds.size}개 메시지를 삭제할까요? 되돌릴 수 없어요.`,
+    );
+    if (result !== POPUP_RESULT.AFFIRMATIVE) {
+        return;
+    }
+
+    const idsDescending = [...listSelectedIds].sort((a, b) => b - a);
+    for (const mesId of idsDescending) {
+        await executeSlashCommandsWithOptions(`/cut ${mesId}`, { showOutput: false });
+    }
+
+    listSelectedIds.clear();
+    toastr.success('선택한 메시지를 삭제했어요.');
+    renderListRows();
 }
 
-.smm-list-tab.active {
-    background-color: var(--SmartThemeQuoteColor, #3a8ee6);
-    color: #ffffff;
+/** 선택된 메시지들의 숨김 상태를 각자 반대로 뒤집어요. (보이던 건 숨기고, 숨겨진 건 다시 보이게) */
+async function toggleHideSelectedMessages() {
+    if (listSelectedIds.size === 0) {
+        toastr.warning('선택된 메시지가 없어요.');
+        return;
+    }
+
+    for (const mesId of listSelectedIds) {
+        const mes = context.chat[mesId];
+        if (!mes) continue;
+        const command = mes.is_system ? '/unhide' : '/hide';
+        await executeSlashCommandsWithOptions(`${command} ${mesId}`, { showOutput: false });
+    }
+
+    toastr.success('선택한 메시지의 숨김 상태를 바꿨어요.');
+    renderListRows();
 }
 
-.smm-modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 4px 0;
+/** 리스트 패널(모달)을 닫아요. */
+function closeListPanel() {
+    const overlay = document.getElementById('smm-list-overlay');
+    if (overlay) overlay.remove();
+    listSelectedIds.clear();
 }
 
-.smm-list-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-bottom: 1px solid #f2f2f2;
-    cursor: pointer;
-}
+/** 리스트 패널(모달)을 화면 중앙에 열어요. */
+function createListPanel() {
+    if (document.getElementById('smm-list-overlay')) {
+        return;
+    }
 
-.smm-list-row-hidden {
-    background-color: #f0f0f0;
-    opacity: 0.7;
-}
+    const overlay = document.createElement('div');
+    overlay.id = 'smm-list-overlay';
 
-.smm-list-index {
-    color: #999;
-    font-size: 12px;
-    min-width: 32px;
-}
+    overlay.innerHTML = `
+        <div id="smm-list-panel">
+            <div id="smm-list-header">
+                <input type="checkbox" id="smm-list-select-all" class="smm-list-checkbox" title="전체 선택" />
+                <span id="smm-list-title">메시지 목록 관리</span>
+                <button id="smm-list-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="smm-list-body"></div>
+            <div id="smm-list-footer">
+                <button id="smm-list-hide-btn" class="smm-scroll-btn" title="선택 숨기기/보이기">
+                    <i class="fa-solid fa-ghost"></i> 숨기기/보이기
+                </button>
+                <button id="smm-list-delete-btn" class="smm-scroll-btn smm-danger-button" title="선택 삭제">
+                    <i class="fa-solid fa-trash-can"></i> 삭제
+                </button>
+            </div>
+        </div>
+    `;
 
-.smm-list-name {
-    font-weight: 600;
-    font-size: 13px;
-    min-width: 60px;
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+    document.body.appendChild(overlay);
 
-.smm-list-preview {
-    flex: 1;
-    font-size: 13px;
-    color: #555;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+    // 회색 배경(바깥) 클릭하면 닫혀요.
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeListPanel();
+    });
 
-.smm-list-empty {
-    padding: 24px;
-    text-align: center;
-    color: #999;
-}
+    document.getElementById('smm-list-close').addEventListener('click', closeListPanel);
+    document.getElementById('smm-list-select-all').addEventListener('click', toggleSelectAllRows);
+    document.getElementById('smm-list-delete-btn').addEventListener('click', deleteSelectedMessages);
+    document.getElementById('smm-list-hide-btn').addEventListener('click', toggleHideSelectedMessages);
 
-.smm-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 10px 12px;
-    border-top: 1px solid #eee;
+    renderListRows();
 }
