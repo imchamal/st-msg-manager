@@ -950,7 +950,7 @@ mes.swipes.forEach((swipeText, i) => {
         row.innerHTML = `
             <div class="smm-swipe-detail-top">
                 <span class="smm-swipe-version-badge">버전 ${i + 1}</span>
-                <span class="smm-swipe-detail-preview">${isExpanded ? '' : getMessagePreview(swipeText)}</span>
+                <span class="smm-swipe-detail-preview">${getMessagePreview(swipeText)}</span>
                 <button class="smm-swipe-adopt-btn ${isCurrent ? 'smm-swipe-adopt-current' : ''}" ${isCurrent ? 'disabled' : ''}>
                     ${isCurrent ? '현재' : '채택'}
                 </button>

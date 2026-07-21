@@ -270,13 +270,40 @@
     color: #aaa;
 }
 
-/* 개별 체크박스 & 전체선택 체크박스 - 같은 모양으로 통일 */
+/* 개별 체크박스 & 전체선택 체크박스 - 같은 모양으로 통일
+   (브라우저 기본 체크박스 대신 직접 그려서 크기/정렬을 완전히 고정해요) */
 .smm-list-checkbox {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
     width: 18px;
     height: 18px;
-    accent-color: var(--SmartThemeQuoteColor, #3a8ee6);
+    min-width: 18px;
+    margin: 0;
+    padding: 0;
+    border: 1.5px solid #ccc;
+    border-radius: 5px;
     cursor: pointer;
     flex-shrink: 0;
+    position: relative;
+    vertical-align: middle;
+}
+
+.smm-list-checkbox:checked {
+    background-color: var(--SmartThemeQuoteColor, #3a8ee6);
+    border-color: var(--SmartThemeQuoteColor, #3a8ee6);
+}
+
+.smm-list-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
 }
 
 #smm-list-footer {
@@ -443,10 +470,15 @@
 
 .smm-swipe-adopt-btn {
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    box-sizing: border-box;
     font-size: 11px;
     font-weight: 600;
     border-radius: 8px;
-    padding: 3px 9px;
+    padding: 0 9px;
     border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
     background-color: #ffffff;
     color: var(--SmartThemeQuoteColor, #3a8ee6);
@@ -461,6 +493,11 @@
 
 .smm-swipe-delete-icon-btn {
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
     background: none;
     border: none;
     cursor: pointer;
@@ -470,6 +507,11 @@
 
 .smm-swipe-expand-btn {
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
     background: none;
     border: none;
     cursor: pointer;
