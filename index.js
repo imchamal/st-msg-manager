@@ -1187,7 +1187,7 @@ function openDragEditPopup(rect) {
 
     const input = popup.querySelector('#smm-drag-edit-input');
     input.value = dragEditSelectedText;
-    input.focus();
+    input.focus({ preventScroll: true });  // 자동 스크롤 방지
     input.select();
 
     popup.querySelector('#smm-drag-edit-cancel').addEventListener('click', closeDragEditAll);
@@ -1271,7 +1271,10 @@ function checkTextSelection() {
 document.addEventListener('selectionchange', scheduleSelectionCheck);
 
 // 채팅을 스크롤하거나(캡처 단계라 #chat 내부 스크롤도 잡혀요), 툴바/입력창 바깥을 클릭하면 닫아요.
-document.addEventListener('scroll', () => closeDragEditAll(), true);
+document.addEventListener('scroll', () => {
+    if (dragEditPopupOpen) return;  // 입력창이 열려있는 동안은 스크롤로 닫지 않아요
+    closeDragEditAll();
+}, true);
 document.addEventListener('mousedown', (e) => {
     if (!e.target.closest('#smm-drag-edit-toolbar, #smm-drag-edit-popup')) {
         closeDragEditAll();
