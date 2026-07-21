@@ -202,6 +202,26 @@ async function scrollToMesId(mesId) {
 }
 
 function goFirst() { scrollToMesId(0); }
+
+/** 지금 채팅창에 실제로 그려져 있는(로딩된) 메시지 중 번호가 가장 작은 것을 찾아요. */
+function getFirstLoadedMesId() {
+    const first = document.querySelector('#chat .mes[mesid]');
+    if (!first) return null;
+    return Number(first.getAttribute('mesid'));
+}
+
+/** "처음으로"와 다르게, 추가로 이전 메시지를 불러오지 않고
+ *  지금 로딩되어 있는 것 중 맨 앞 메시지로만 이동해요. */
+function goFirstLoaded() {
+    const firstLoadedId = getFirstLoadedMesId();
+    if (firstLoadedId === null) {
+        toastr.warning('불러와진 메시지가 없어요.');
+        return;
+    }
+    // 이미 화면에 있는 메시지라, scrollToMesId 안의 "더 불러오기" 로직은 실행되지 않고 바로 이동해요.
+    scrollToMesId(firstLoadedId);
+}
+
 function goLast() { scrollToMesId(getLastMesId()); }
 function goPrev() {
     const base = currentMesId === null ? getLastMesId() : currentMesId;
@@ -237,7 +257,8 @@ function createScrollBar() {
     const bar = document.createElement('div');
     bar.id = 'smm-scrollbar';
     bar.innerHTML = `
-        <button class="smm-scroll-btn" title="처음"><i class="fa-solid fa-angles-up"></i></button>
+        <button class="smm-scroll-btn" title="처음 (필요하면 이전 메시지를 불러와요)"><i class="fa-solid fa-angles-up"></i></button>
+        <button class="smm-scroll-btn" title="로딩된 처음 (추가로 불러오지 않아요)"><i class="fa-solid fa-arrow-up-to-line"></i></button>
         <button class="smm-scroll-btn" title="이전"><i class="fa-solid fa-angle-up"></i></button>
         <input type="number" id="smm-go-input" placeholder="번호" min="0" />
         <button class="smm-scroll-btn" title="이동"><i class="fa-solid fa-arrow-right"></i></button>
@@ -246,8 +267,9 @@ function createScrollBar() {
         <button class="smm-scroll-btn smm-scroll-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
     `;
 
-    const [firstBtn, prevBtn, goBtn, nextBtn, lastBtn, closeBtn] = bar.querySelectorAll('button');
+    const [firstBtn, firstLoadedBtn, prevBtn, goBtn, nextBtn, lastBtn, closeBtn] = bar.querySelectorAll('button');
     firstBtn.addEventListener('click', goFirst);
+    firstLoadedBtn.addEventListener('click', goFirstLoaded);
     prevBtn.addEventListener('click', goPrev);
     nextBtn.addEventListener('click', goNext);
     lastBtn.addEventListener('click', goLast);
