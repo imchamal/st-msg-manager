@@ -258,11 +258,11 @@ function createScrollBar() {
     bar.id = 'smm-scrollbar';
     bar.innerHTML = `
         <button class="smm-scroll-btn" title="처음 (필요하면 이전 메시지를 불러와요)"><i class="fa-solid fa-angles-up"></i></button>
-        <button class="smm-scroll-btn" title="로딩된 처음 (추가로 불러오지 않아요)"><i class="fa-solid fa-arrow-up-to-line"></i></button>
-        <button class="smm-scroll-btn" title="이전"><i class="fa-solid fa-angle-up"></i></button>
+        <button class="smm-scroll-btn" title="로딩된 처음 (추가로 불러오지 않아요)"><i class="fa-solid fa-angle-up"></i></button>
+        <button class="smm-scroll-btn" title="이전"><i class="fa-solid fa-angle-left"></i></button>
         <input type="number" id="smm-go-input" placeholder="번호" min="0" />
-        <button class="smm-scroll-btn" title="이동"><i class="fa-solid fa-arrow-right"></i></button>
-        <button class="smm-scroll-btn" title="다음"><i class="fa-solid fa-angle-down"></i></button>
+        <button class="smm-scroll-btn" title="이동"><i class="fa-solid fa-magnifying-glass"></i></button>
+        <button class="smm-scroll-btn" title="다음"><i class="fa-solid fa-angle-right"></i></button>
         <button class="smm-scroll-btn" title="끝"><i class="fa-solid fa-angles-down"></i></button>
         <button class="smm-scroll-btn smm-scroll-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
     `;
