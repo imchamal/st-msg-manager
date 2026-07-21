@@ -64,8 +64,9 @@ function createFloatingButton() {
     button.title = '메시지 매니저';
     button.innerHTML = '<i class="fa-solid fa-list-check"></i>';
 
-    button.addEventListener('click', () => {
-        console.log(`[${MODULE_NAME}] 플로팅 버튼 클릭됨 (아직 메뉴는 없어요)`);
+    button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleRadialMenu();
     });
 
     document.body.appendChild(button);
@@ -149,6 +150,149 @@ function injectDeleteButton(mesElement) {
  */
 function injectAllDeleteButtons() {
     document.querySelectorAll('#chat .mes').forEach(injectDeleteButton);
+}
+
+// ============================================================
+// 기능 2: 원형 메뉴 + 이동(스크롤) 기능
+// ------------------------------------------------------------
+// 플로팅 버튼을 누르면 4개의 작은 원형 아이콘이 부채꼴로 펼쳐져요.
+// 그중 "이동" 아이콘을 누르면, 처음/이전/번호입력/다음/끝
+// 5개 버튼이 있는 미니 이동바가 떠요.
+// ============================================================
+
+// 지금 몇 번 메시지를 보고 있는지 기억해두는 변수예요.
+// (이전/다음 버튼이 여기서부터 한 칸씩 움직여요)
+let currentMesId = null;
+
+function getLastMesId() {
+    return context.chat.length - 1;
+}
+
+/** 특정 번호의 메시지로 화면을 부드럽게 스크롤해요. */
+function scrollToMesId(mesId) {
+    const target = document.querySelector(`#chat .mes[mesid="${mesId}"]`);
+    if (!target) {
+        toastr.warning('해당 번호의 메시지를 찾을 수 없어요.');
+        return;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    currentMesId = mesId;
+}
+
+function goFirst() { scrollToMesId(0); }
+function goLast() { scrollToMesId(getLastMesId()); }
+function goPrev() {
+    const base = currentMesId === null ? getLastMesId() : currentMesId;
+    scrollToMesId(Math.max(0, base - 1));
+}
+function goNext() {
+    const base = currentMesId === null ? 0 : currentMesId;
+    scrollToMesId(Math.min(getLastMesId(), base + 1));
+}
+function goToNumber(rawValue) {
+    const n = parseInt(rawValue, 10);
+    if (Number.isNaN(n) || n < 0 || n > getLastMesId()) {
+        toastr.warning('올바른 메시지 번호를 입력해주세요.');
+        return;
+    }
+    scrollToMesId(n);
+}
+
+/** 처음/이전/번호입력/다음/끝 버튼이 있는 미니 이동바를 만들어요. */
+function createScrollBar() {
+    if (document.getElementById('smm-scrollbar')) {
+        return;
+    }
+
+    const bar = document.createElement('div');
+    bar.id = 'smm-scrollbar';
+    bar.innerHTML = `
+        <button class="smm-scroll-btn" title="처음"><i class="fa-solid fa-angles-up"></i></button>
+        <button class="smm-scroll-btn" title="이전"><i class="fa-solid fa-angle-up"></i></button>
+        <input type="number" id="smm-go-input" placeholder="번호" min="0" />
+        <button class="smm-scroll-btn" title="이동"><i class="fa-solid fa-arrow-right"></i></button>
+        <button class="smm-scroll-btn" title="다음"><i class="fa-solid fa-angle-down"></i></button>
+        <button class="smm-scroll-btn" title="끝"><i class="fa-solid fa-angles-down"></i></button>
+        <button class="smm-scroll-btn smm-scroll-close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+    `;
+
+    const [firstBtn, prevBtn, , goBtn, nextBtn, lastBtn, closeBtn] = bar.querySelectorAll('button');
+    firstBtn.addEventListener('click', goFirst);
+    prevBtn.addEventListener('click', goPrev);
+    nextBtn.addEventListener('click', goNext);
+    lastBtn.addEventListener('click', goLast);
+    goBtn.addEventListener('click', () => goToNumber(bar.querySelector('#smm-go-input').value));
+    closeBtn.addEventListener('click', () => bar.remove());
+
+    document.body.appendChild(bar);
+}
+
+/** 원형 메뉴에 들어갈 4개 항목의 정의예요. (아이콘, 설명, 각도, 클릭시 동작) */
+function getRadialMenuItems() {
+    return [
+        { id: 'smm-radial-list', icon: 'fa-list-ul', title: '메시지 목록 관리', angle: 100,
+            onClick: () => toastr.info('메시지 목록 관리는 다음 단계에서 만들 거예요.') },
+        { id: 'smm-radial-swipe', icon: 'fa-shuffle', title: '스와이프 관리', angle: 130,
+            onClick: () => toastr.info('스와이프 관리는 다음 단계에서 만들 거예요.') },
+        { id: 'smm-radial-search', icon: 'fa-magnifying-glass', title: '검색/바꾸기', angle: 160,
+            onClick: () => toastr.info('검색/바꾸기는 다음 단계에서 만들 거예요.') },
+        { id: 'smm-radial-move', icon: 'fa-arrows-up-down', title: '이동', angle: 190,
+            onClick: () => { createScrollBar(); closeRadialMenu(); } },
+    ];
+}
+
+function closeRadialMenu() {
+    const menu = document.getElementById('smm-radial-menu');
+    if (menu) {
+        menu.remove();
+    }
+}
+
+/** 원형 메뉴(4개 아이콘)를 화면에 부채꼴 모양으로 펼쳐요. */
+function createRadialMenu() {
+    if (document.getElementById('smm-radial-menu')) {
+        return;
+    }
+
+    const radius = 90; // 플로팅 버튼 중심에서 얼마나 멀리 떨어뜨릴지 (픽셀)
+    const menu = document.createElement('div');
+    menu.id = 'smm-radial-menu';
+
+    getRadialMenuItems().forEach((item) => {
+        const rad = (item.angle * Math.PI) / 180;
+        const x = Math.cos(rad) * radius; // 왼쪽으로 이동할 거리
+        const y = Math.sin(rad) * radius; // 위쪽으로 이동할 거리
+
+        const btn = document.createElement('div');
+        btn.className = 'smm-radial-item';
+        btn.title = item.title;
+        btn.innerHTML = `<i class="fa-solid ${item.icon}"></i>`;
+        // 플로팅 버튼과 같은 기준(right/bottom)으로 위치를 계산해요.
+        btn.style.right = `${20 - x}px`;
+        btn.style.bottom = `${90 + y}px`;
+
+        btn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            item.onClick();
+        });
+
+        menu.appendChild(btn);
+    });
+
+    document.body.appendChild(menu);
+
+    // 메뉴 바깥을 클릭하면 자동으로 닫히게 해요.
+    setTimeout(() => {
+        document.addEventListener('click', closeRadialMenu, { once: true });
+    }, 0);
+}
+
+function toggleRadialMenu() {
+    if (document.getElementById('smm-radial-menu')) {
+        closeRadialMenu();
+    } else {
+        createRadialMenu();
+    }
 }
 
 /**

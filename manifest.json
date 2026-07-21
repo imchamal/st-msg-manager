@@ -3,8 +3,8 @@
     "loading_order": 10,
     "js": "index.js",
     "css": "style.css",
-    "author": "나 (초보 바이브코더)",
-    "version": "0.1.1",
-    "homePage": "https://github.com/your-username/silly-message-manager",
+    "author": "imchamal",
+    "version": "0.1.2",
+    "homePage": "https://github.com/imchamal/st-msg-manager",
     "auto_update": true
 }
