@@ -24,6 +24,13 @@
     --smm-icon-btn-size: 28px;
 }
 
+.smm-settings-note {
+    display: block;
+    margin-top: 6px;
+    opacity: 0.75;
+    line-height: 1.4;
+}
+
 /* 화면에 떠있는 원형 플로팅 버튼 */
 #smm-floating-button {
     position: fixed;

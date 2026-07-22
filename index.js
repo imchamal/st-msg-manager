@@ -6,6 +6,9 @@
 // 앞으로 기능을 하나씩 여기에 채워나갈 거예요.
 // ============================================================
 
+import { SlashCommand } from '../../../slash-commands/SlashCommand.js';
+import { SlashCommandParser } from '../../../slash-commands/SlashCommandParser.js';
+
 // 실리태번의 모든 핵심 기능(채팅 데이터, 저장 함수 등)은
 // 이 getContext() 함수 하나로 꺼내 쓸 수 있어요.
 const context = SillyTavern.getContext();
@@ -29,6 +32,7 @@ const MODULE_NAME = 'silly_message_manager';
 // (예: 나중에 "라이트 테마 강제 여부" 같은 옵션을 여기에 추가할 수 있어요)
 const defaultSettings = Object.freeze({
     enabled: true,
+    showFloatingButton: true,
 });
 
 /**
@@ -47,6 +51,70 @@ function getSettings() {
         }
     }
     return extensionSettings[MODULE_NAME];
+}
+
+function setFloatingButtonVisible(visible) {
+    const button = document.getElementById('smm-floating-button');
+    if (visible) {
+        createFloatingButton();
+        document.getElementById('smm-floating-button')?.style.removeProperty('display');
+        return;
+    }
+
+    closeRadialMenu();
+    if (button) {
+        // 토글을 자주 바꿀 때 resize 리스너를 중복 등록하지 않도록 제거 대신 숨겨요.
+        button.style.display = 'none';
+    }
+}
+
+function saveSmmSettings() {
+    saveSettingsDebounced();
+}
+
+function createSettingsPanel() {
+    const settingsContainer = document.getElementById('extensions_settings2') || document.getElementById('extensions_settings');
+    if (!settingsContainer || document.getElementById('smm-settings-drawer')) return;
+
+    const settings = getSettings();
+    const drawer = document.createElement('div');
+    drawer.id = 'smm-settings-drawer';
+    drawer.className = 'inline-drawer';
+    drawer.innerHTML = `
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>메시지 매니저</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <label class="checkbox_label" for="smm-setting-floating-button">
+                <input type="checkbox" id="smm-setting-floating-button" />
+                <span>플로팅 버튼 표시</span>
+            </label>
+            <small class="smm-settings-note">
+                끄더라도 /move, /search, /swipes, /list 슬래시 커맨드는 계속 사용할 수 있어요.
+            </small>
+        </div>
+    `;
+
+    settingsContainer.append(drawer);
+
+    const toggle = drawer.querySelector('.inline-drawer-toggle');
+    const icon = drawer.querySelector('.inline-drawer-icon');
+    const content = drawer.querySelector('.inline-drawer-content');
+    toggle.addEventListener('click', () => {
+        toggle.classList.toggle('open');
+        icon.classList.toggle('down');
+        icon.classList.toggle('up');
+        content.classList.toggle('open');
+    });
+
+    const floatingCheckbox = drawer.querySelector('#smm-setting-floating-button');
+    floatingCheckbox.checked = settings.showFloatingButton;
+    floatingCheckbox.addEventListener('change', () => {
+        settings.showFloatingButton = floatingCheckbox.checked;
+        setFloatingButtonVisible(settings.showFloatingButton);
+        saveSmmSettings();
+    });
 }
 
 /**
@@ -578,6 +646,42 @@ function toggleRadialMenu() {
     } else {
         createRadialMenu();
     }
+}
+
+let slashCommandsRegistered = false;
+
+function openPanelFromSlash(openPanel, label) {
+    updateMobileLayoutVars();
+    openPanel();
+    toastr.info(`${label} 패널을 열었어요.`);
+    return '';
+}
+
+function registerSlashCommands() {
+    if (slashCommandsRegistered) return;
+    slashCommandsRegistered = true;
+
+    // 빠른답장 버튼에서 바로 호출할 수 있도록 각 패널을 slash command로 열어요.
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'move',
+        callback: () => openPanelFromSlash(createScrollBar, '이동'),
+        helpString: '메시지 매니저의 이동 패널을 엽니다.',
+    }));
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'search',
+        callback: () => openPanelFromSlash(createSearchBar, '검색/바꾸기'),
+        helpString: '메시지 매니저의 검색/바꾸기 패널을 엽니다.',
+    }));
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'swipes',
+        callback: () => openPanelFromSlash(openSwipeListPanel, '스와이프 관리'),
+        helpString: '메시지 매니저의 스와이프 관리 패널을 엽니다.',
+    }));
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'list',
+        callback: () => openPanelFromSlash(createListPanel, '메시지 목록 관리'),
+        helpString: '메시지 매니저의 메시지 목록 관리 패널을 엽니다.',
+    }));
 }
 
 // ============================================================
@@ -1530,9 +1634,11 @@ document.addEventListener('mousedown', (e) => {
  * 여기서 설정을 불러오고, 화면에 버튼을 만들어요.
  */
 function init() {
-    getSettings();
+    const settings = getSettings();
     setupMobileLayoutVars();
-    createFloatingButton();
+    createSettingsPanel();
+    setFloatingButtonVisible(settings.showFloatingButton);
+    registerSlashCommands();
 
     // 확장이 켜지는 시점에 이미 화면에 그려져 있는 메시지들에도 아이콘을 붙여줘요.
     injectAllDeleteButtons();
