@@ -11,6 +11,17 @@
 :root {
     /* JS가 SillyTavern 하단 입력창 위치를 측정해 갱신해요. 실패하면 이 기본값을 사용합니다. */
     --smm-bottom-offset: 90px;
+
+    /* 전체 UI 크기 조절 토큰: 테마에 비해 커 보이면 여기 숫자부터 줄이세요. */
+    --smm-fab-size: 44px;
+    --smm-fab-font: 17px;
+    --smm-radial-size: 34px;
+    --smm-radial-font: 14px;
+    --smm-panel-width: 420px;
+    --smm-panel-radius: 12px;
+    --smm-row-font: 12px;
+    --smm-btn-font: 12px;
+    --smm-icon-btn-size: 28px;
 }
 
 /* 화면에 떠있는 원형 플로팅 버튼 */
@@ -18,8 +29,8 @@
     position: fixed;
     right: 20px;
     bottom: 90px;
-    width: 52px;
-    height: 52px;
+    width: var(--smm-fab-size);
+    height: var(--smm-fab-size);
     border-radius: 50%;
     background-color: #ffffff;
     color: var(--SmartThemeQuoteColor, #3a8ee6);
@@ -27,10 +38,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: var(--smm-fab-font);
     cursor: grab;
     z-index: 9999;
-    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.13);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
     /* opacity와 transform 모두 부드럽게 */
     transition: transform 0.15s ease, opacity 0.5s ease, box-shadow 0.15s ease;
     user-select: none;
@@ -64,8 +75,8 @@
 /* 원형 메뉴에서 펼쳐지는 작은 아이콘 버튼들 */
 .smm-radial-item {
     position: fixed;
-    width: 42px;
-    height: 42px;
+    width: var(--smm-radial-size);
+    height: var(--smm-radial-size);
     border-radius: 50%;
     background-color: #ffffff;
     color: var(--SmartThemeQuoteColor, #3a8ee6);
@@ -73,10 +84,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: var(--smm-radial-font);
     cursor: pointer;
     z-index: 9998;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.13);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     animation: smm-radial-pop 0.18s ease both;
 }
 
@@ -223,10 +234,10 @@
 }
 
 #smm-list-panel {
-    width: min(480px, 90vw);
+    width: min(var(--smm-panel-width), 90%);
     max-height: 80vh;
     background-color: #ffffff;
-    border-radius: 16px;
+    border-radius: var(--smm-panel-radius);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
@@ -264,8 +275,8 @@
 .smm-list-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
+    gap: 6px;
+    padding: 6px 10px;
     border-bottom: 1px solid #f2f2f2;
 }
 
@@ -276,13 +287,13 @@
 
 .smm-list-index {
     color: #999;
-    font-size: 12px;
+    font-size: var(--smm-row-font);
     min-width: 28px;
 }
 
 .smm-list-name {
     font-weight: 600;
-    font-size: 13px;
+    font-size: var(--smm-row-font);
     min-width: 60px;
     max-width: 90px;
     overflow: hidden;
@@ -292,7 +303,7 @@
 
 .smm-list-preview {
     flex: 1;
-    font-size: 13px;
+    font-size: var(--smm-row-font);
     color: #555;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -309,9 +320,9 @@
     -webkit-appearance: none !important;
     appearance: none !important;
     box-sizing: border-box !important;
-    width: 18px !important;
-    height: 18px !important;
-    min-width: 18px !important;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 1.5px solid #ccc;
@@ -330,10 +341,10 @@
 .smm-list-checkbox:checked::after {
     content: '';
     position: absolute;
-    left: 5px;
+    left: 4px;
     top: 1px;
     width: 4px;
-    height: 8px;
+    height: 7px;
     border: solid #ffffff;
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
@@ -353,9 +364,9 @@
     justify-content: center;
     gap: 6px;
     border: 1px solid var(--SmartThemeQuoteColor, #3a8ee6);
-    border-radius: 10px;
-    padding: 8px;
-    font-size: 13px;
+    border-radius: 9px;
+    padding: 6px;
+    font-size: var(--smm-btn-font);
 }
 
 #smm-list-footer .smm-danger-button {
@@ -375,10 +386,10 @@
 }
 
 #smm-swipe-list-panel {
-    width: min(480px, 90vw);
+    width: min(var(--smm-panel-width), 90%);
     max-height: 80vh;
     background-color: #ffffff;
-    border-radius: 16px;
+    border-radius: var(--smm-panel-radius);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
@@ -429,10 +440,10 @@
 }
 
 #smm-swipe-detail-panel {
-    width: min(480px, 90vw);
+    width: min(var(--smm-panel-width), 90%);
     max-height: 80vh;
     background-color: #ffffff;
-    border-radius: 16px;
+    border-radius: var(--smm-panel-radius);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
@@ -657,9 +668,9 @@
     #smm-swipe-list-panel,
     #smm-swipe-detail-panel {
         /* #sheld 기준 absolute 모달이라 100vw 대신 부모 폭 안에서 적당한 최대 폭만 잡아요. */
-        width: min(480px, calc(100% - 24px));
-        max-height: min(76dvh, calc(100% - 24px));
-        border-radius: 14px;
+        width: min(var(--smm-panel-width), calc(100% - 32px));
+        max-height: min(72dvh, calc(100% - 32px));
+        border-radius: var(--smm-panel-radius);
     }
 
     .smm-list-row {
