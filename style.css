@@ -87,7 +87,8 @@
 
 /* 이동(스크롤) 미니바 */
 #smm-scrollbar {
-    position: fixed;
+    /* #sheld 안에 붙는 패널이라 absolute를 씁니다. html transform이 fixed 기준을 망가뜨리는 환경을 피하기 위함이에요. */
+    position: absolute;
     left: 50%;
     bottom: 90px;
     transform: translateX(-50%);
@@ -151,7 +152,8 @@
 
 /* 검색/바꾸기 바 */
 #smm-searchbar {
-    position: fixed;
+    /* #sheld 안에 붙는 패널이라 absolute를 씁니다. html transform이 fixed 기준을 망가뜨리는 환경을 피하기 위함이에요. */
+    position: absolute;
     left: 50%;
     bottom: 90px;
     transform: translateX(-50%);
@@ -210,7 +212,8 @@
 
 /* 메시지 목록 관리 모달 */
 #smm-list-overlay {
-    position: fixed;
+    /* #sheld 전체를 덮는 overlay입니다. body fixed가 아니라 #sheld absolute 기준으로 맞춰요. */
+    position: absolute;
     inset: 0;
     background-color: rgba(0, 0, 0, 0.35);
     z-index: 9999;
@@ -361,7 +364,8 @@
 
 /* 스와이프 관리 - 1단계: 목록 */
 #smm-swipe-list-overlay {
-    position: fixed;
+    /* #sheld 전체를 덮는 overlay입니다. body fixed가 아니라 #sheld absolute 기준으로 맞춰요. */
+    position: absolute;
     inset: 0;
     background-color: rgba(0, 0, 0, 0.35);
     z-index: 9999;
@@ -414,7 +418,8 @@
 
 /* 스와이프 관리 - 2단계: 상세보기 */
 #smm-swipe-detail-overlay {
-    position: fixed;
+    /* #sheld 전체를 덮는 overlay입니다. body fixed가 아니라 #sheld absolute 기준으로 맞춰요. */
+    position: absolute;
     inset: 0;
     background-color: rgba(0, 0, 0, 0.35);
     z-index: 9999;

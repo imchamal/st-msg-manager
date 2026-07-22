@@ -103,9 +103,23 @@ function keepFabInViewport(button, persist = false) {
     }
 }
 
-/** fixed 패널들이 피해야 하는 SillyTavern 하단 입력 영역의 높이를 CSS 변수로 공유해요. */
+/**
+ * 패널을 붙일 실제 화면 컨테이너를 찾아요.
+ * SillyTavern 모바일에서는 <html>에 transform이 걸릴 수 있어서 body 안 fixed 배치가 깨집니다.
+ * 높이가 정상인 #sheld 안에 absolute로 붙이면 그 문제를 피할 수 있어요.
+ */
+function getSmmUiHost() {
+    return document.getElementById('sheld') || document.body;
+}
+
+function appendSmmUi(el) {
+    getSmmUiHost().appendChild(el);
+}
+
+/** absolute 패널들이 피해야 하는 SillyTavern 하단 입력 영역의 높이를 CSS 변수로 공유해요. */
 function updateMobileLayoutVars() {
-    const viewport = getViewportSize();
+    const host = getSmmUiHost();
+    const hostRect = host.getBoundingClientRect();
     const vv = window.visualViewport;
     const keyboardOffset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
     const selectors = [
@@ -121,9 +135,9 @@ function updateMobileLayoutVars() {
         document.querySelectorAll(selector).forEach((el) => {
             const rect = el.getBoundingClientRect();
             if (rect.width === 0 || rect.height === 0) return;
-            if (rect.bottom < viewport.height * 0.55) return;
+            if (rect.bottom < hostRect.top + hostRect.height * 0.55) return;
 
-            bottomOffset = Math.max(bottomOffset, viewport.height - rect.top + 12);
+            bottomOffset = Math.max(bottomOffset, hostRect.bottom - rect.top + 12);
         });
     });
 
@@ -485,7 +499,7 @@ function createScrollBar() {
     goBtn.addEventListener('click', () => goToNumber(bar.querySelector('#smm-go-input').value));
     closeBtn.addEventListener('click', () => bar.remove());
 
-    document.body.appendChild(bar);
+    appendSmmUi(bar);
 }
 
 /** 원형 메뉴에 들어갈 4개 항목의 정의예요. (아이콘, 설명, 각도, 클릭시 동작) */
@@ -817,7 +831,7 @@ function createSearchBar() {
         </div>
     `;
 
-    document.body.appendChild(bar);
+    appendSmmUi(bar);
 
     const input = bar.querySelector('#smm-search-input');
     input.addEventListener('keydown', (e) => {
@@ -997,7 +1011,7 @@ function createListPanel() {
         </div>
     `;
 
-    document.body.appendChild(overlay);
+    appendSmmUi(overlay);
 
     // 회색 배경(바깥) 클릭하면 닫혀요.
     overlay.addEventListener('click', (e) => {
@@ -1091,7 +1105,7 @@ function openSwipeListPanel() {
         </div>
     `;
 
-    document.body.appendChild(overlay);
+    appendSmmUi(overlay);
 
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) closeSwipeListPanel();
@@ -1271,7 +1285,7 @@ function openSwipeDetailPanel(mesId) {
         </div>
     `;
 
-    document.body.appendChild(overlay);
+    appendSmmUi(overlay);
 
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) closeSwipeDetailPanel();
