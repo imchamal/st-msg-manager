@@ -1197,14 +1197,17 @@ function closeDragEditPopup() {
     document.getElementById('smm-drag-edit-popup')?.remove();
 }
 
-function closeDragEditAll() {
+function closeDragEditAll(clearSelection = false) {
     closeDragEditToolbar();
     closeDragEditPopup();
     dragEditPopupOpen = false;
     dragEditRange = null;
     dragEditMesId = null;
     dragEditSelectedText = '';
-    window.getSelection()?.removeAllRanges();
+
+    if (clearSelection) {
+        window.getSelection()?.removeAllRanges();
+    }
 }
 
 /** container 안에서 targetNode/targetOffset이 "글자 몇 번째"인지 계산해요. */
@@ -1385,11 +1388,15 @@ document.addEventListener('selectionchange', scheduleSelectionCheck);
 // 채팅을 스크롤하거나(캡처 단계라 #chat 내부 스크롤도 잡혀요), 툴바/입력창 바깥을 클릭하면 닫아요.
 document.addEventListener('scroll', () => {
     if (dragEditPopupOpen) return;  // 입력창이 열려있는 동안은 스크롤로 닫지 않아요
-    closeDragEditAll();
+    closeDragEditToolbar();
 }, true);
 document.addEventListener('mousedown', (e) => {
+    if (e.target.closest('textarea, input, [contenteditable="true"]')) {
+        return;
+    }
+
     if (!e.target.closest('#smm-drag-edit-toolbar, #smm-drag-edit-popup')) {
-        closeDragEditAll();
+        closeDragEditToolbar();
     }
 });
 
