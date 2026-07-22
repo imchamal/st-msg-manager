@@ -553,6 +553,78 @@
     overflow-y: auto;
 }
 
+/* 모바일 보정: SillyTavern 하단 입력창, 브라우저 safe area, 좁은 가로폭과 겹치지 않게 조정해요. */
+@media (max-width: 600px) {
+    #smm-floating-button {
+        right: 12px;
+        bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+        z-index: 10002;
+    }
+
+    /* 모바일에서는 0.22 opacity가 실제로 사라진 것처럼 보여서 조금 더 진하게 유지해요. */
+    #smm-floating-button.smm-faded {
+        opacity: 0.55;
+    }
+
+    .smm-radial-item {
+        z-index: 10001;
+    }
+
+    #smm-scrollbar,
+    #smm-searchbar {
+        left: 8px;
+        right: 8px;
+        /* 하단 입력창 위로 띄우는 값이에요. SillyTavern 하단 UI 높이가 바뀌면 여기부터 조정하세요. */
+        bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        transform: none;
+        width: auto;
+        max-width: calc(100vw - 16px);
+        box-sizing: border-box;
+        z-index: 10001;
+    }
+
+    #smm-scrollbar {
+        justify-content: center;
+        flex-wrap: wrap;
+        border-radius: 18px;
+        padding: 7px 8px;
+    }
+
+    #smm-searchbar {
+        padding: 8px;
+    }
+
+    .smm-search-row {
+        flex-wrap: wrap;
+    }
+
+    #smm-search-input,
+    #smm-replace-input {
+        flex: 1 1 120px;
+        min-width: 0;
+        width: auto;
+    }
+
+    #smm-list-overlay,
+    #smm-swipe-list-overlay,
+    #smm-swipe-detail-overlay {
+        align-items: flex-end;
+        padding: 8px;
+        /* 목록/스와이프 패널도 하단 입력창을 피해 아래쪽에 붙여요. */
+        padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        box-sizing: border-box;
+        z-index: 10000;
+    }
+
+    #smm-list-panel,
+    #smm-swipe-list-panel,
+    #smm-swipe-detail-panel {
+        width: 100%;
+        max-height: min(78dvh, calc(100vh - 112px));
+        border-radius: 14px;
+    }
+}
+
 /* 드래그 텍스트 수정 - 1단계: 선택 영역 아래에 뜨는 연필 아이콘 툴바 */
 #smm-drag-edit-toolbar {
     z-index: 10000;

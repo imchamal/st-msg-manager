@@ -68,6 +68,41 @@ function saveFabPosition(left, top) {
     try { localStorage.setItem('smm-fab-pos', JSON.stringify({ left, top })); } catch (e) {}
 }
 
+/** 모바일 브라우저는 주소창/키보드 때문에 innerHeight와 실제 보이는 높이가 달라질 수 있어요. */
+function getViewportSize() {
+    const vv = window.visualViewport;
+    return {
+        width: vv?.width || window.innerWidth,
+        height: vv?.height || window.innerHeight,
+    };
+}
+
+/** 저장된 FAB 위치가 화면 밖이면, 가장 가까운 화면 안쪽 좌표로 밀어 넣어요. */
+function clampFabPosition(left, top, size) {
+    const viewport = getViewportSize();
+    const margin = 8;
+    return {
+        left: Math.max(margin, Math.min(left, viewport.width - size - margin)),
+        top: Math.max(margin, Math.min(top, viewport.height - size - margin)),
+    };
+}
+
+/** 화면 회전, 모바일 주소창 접힘, 키보드 표시 후에도 FAB가 사라지지 않게 보정해요. */
+function keepFabInViewport(button, persist = false) {
+    const rect = button.getBoundingClientRect();
+    const size = button.offsetWidth || 52;
+    const pos = clampFabPosition(rect.left, rect.top, size);
+
+    button.style.left = pos.left + 'px';
+    button.style.top = pos.top + 'px';
+    button.style.right = 'auto';
+    button.style.bottom = 'auto';
+
+    if (persist) {
+        saveFabPosition(pos.left, pos.top);
+    }
+}
+
 function createFloatingButton() {
     if (document.getElementById('smm-floating-button')) return;
 
@@ -80,10 +115,9 @@ function createFloatingButton() {
     const saved = loadFabPosition();
     if (saved) {
         const sz = 52;
-        const l = Math.max(0, Math.min(saved.left, window.innerWidth  - sz));
-        const t = Math.max(0, Math.min(saved.top,  window.innerHeight - sz));
-        button.style.left   = l + 'px';
-        button.style.top    = t + 'px';
+        const pos = clampFabPosition(saved.left, saved.top, sz);
+        button.style.left   = pos.left + 'px';
+        button.style.top    = pos.top + 'px';
         button.style.right  = 'auto';
         button.style.bottom = 'auto';
     }
@@ -115,10 +149,9 @@ function createFloatingButton() {
         button.classList.add('smm-fab-dragging');
         closeRadialMenu();
         const sz   = button.offsetWidth;
-        const newL = Math.max(0, Math.min(window.innerWidth  - sz, dragStartLeft + dx));
-        const newT = Math.max(0, Math.min(window.innerHeight - sz, dragStartTop  + dy));
-        button.style.left = newL + 'px';
-        button.style.top  = newT + 'px';
+        const pos = clampFabPosition(dragStartLeft + dx, dragStartTop + dy, sz);
+        button.style.left = pos.left + 'px';
+        button.style.top  = pos.top + 'px';
     }
 
     function endDrag() {
@@ -175,6 +208,18 @@ function createFloatingButton() {
     resetFade(); // 처음 생성 시 타이머 시작
 
     document.body.appendChild(button);
+
+    requestAnimationFrame(() => keepFabInViewport(button));
+
+    // 모바일 viewport는 스크롤/주소창 변화만으로도 크기가 바뀌므로 FAB 위치를 다시 맞춰줘요.
+    const refit = () => {
+        closeRadialMenu();
+        keepFabInViewport(button, true);
+    };
+    window.addEventListener('resize', refit);
+    window.addEventListener('orientationchange', refit);
+    window.visualViewport?.addEventListener('resize', refit);
+    window.visualViewport?.addEventListener('scroll', refit);
 }
 
 // ============================================================
