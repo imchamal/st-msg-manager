@@ -103,6 +103,65 @@ function keepFabInViewport(button, persist = false) {
     }
 }
 
+/** fixed 패널들이 피해야 하는 SillyTavern 하단 입력 영역의 높이를 CSS 변수로 공유해요. */
+function updateMobileLayoutVars() {
+    const viewport = getViewportSize();
+    const vv = window.visualViewport;
+    const keyboardOffset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    const selectors = [
+        '#send_form',
+        '#form_sheld',
+        '#send_form_wrapper',
+        '#chat-controls',
+        '#quickReplyBar',
+    ];
+    let bottomOffset = Math.max(72, keyboardOffset + 72);
+
+    selectors.forEach((selector) => {
+        document.querySelectorAll(selector).forEach((el) => {
+            const rect = el.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            if (rect.bottom < viewport.height * 0.55) return;
+
+            bottomOffset = Math.max(bottomOffset, viewport.height - rect.top + 12);
+        });
+    });
+
+    document.documentElement.style.setProperty('--smm-bottom-offset', `${Math.ceil(bottomOffset)}px`);
+}
+
+let mobileLayoutVarsBound = false;
+
+function setupMobileLayoutVars() {
+    if (mobileLayoutVarsBound) return;
+    mobileLayoutVarsBound = true;
+
+    let rafId = null;
+    const scheduleUpdate = () => {
+        if (rafId !== null) return;
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            updateMobileLayoutVars();
+        });
+    };
+
+    // 모바일 주소창/키보드/회전으로 하단 입력 영역의 실제 위치가 바뀔 때 다시 측정해요.
+    window.addEventListener('resize', scheduleUpdate);
+    window.addEventListener('orientationchange', scheduleUpdate);
+    window.visualViewport?.addEventListener('resize', scheduleUpdate);
+    window.visualViewport?.addEventListener('scroll', scheduleUpdate);
+    scheduleUpdate();
+}
+
+/** 원형 메뉴 아이콘도 FAB처럼 화면 밖으로 나가지 않게 고정 좌표를 보정해요. */
+function clampFixedPosition(left, top, width, height, margin = 8) {
+    const viewport = getViewportSize();
+    return {
+        left: Math.max(margin, Math.min(left, viewport.width - width - margin)),
+        top: Math.max(margin, Math.min(top, viewport.height - height - margin)),
+    };
+}
+
 function createFloatingButton() {
     if (document.getElementById('smm-floating-button')) return;
 
@@ -214,6 +273,7 @@ function createFloatingButton() {
     // 모바일 viewport는 스크롤/주소창 변화만으로도 크기가 바뀌므로 FAB 위치를 다시 맞춰줘요.
     const refit = () => {
         closeRadialMenu();
+        updateMobileLayoutVars();
         keepFabInViewport(button, true);
     };
     window.addEventListener('resize', refit);
@@ -401,6 +461,7 @@ function createScrollBar() {
     if (document.getElementById('smm-scrollbar')) {
         return;
     }
+    updateMobileLayoutVars();
 
     const bar = document.createElement('div');
     bar.id = 'smm-scrollbar';
@@ -473,10 +534,11 @@ function createRadialMenu() {
         btn.title     = item.title;
         btn.innerHTML = `<i class="fa-solid ${item.icon}"></i>`;
 
-        // left/top 기준으로 버튼 중심에서 퍼져나가는 위치 계산
-        // y는 화면에서 아래가 +이므로 반전(-y)해야 기존과 같은 방향이 나와요
-        btn.style.left   = `${cx + x - 21}px`;
-        btn.style.top    = `${cy - y - 21}px`;
+        // left/top 기준으로 버튼 중심에서 퍼져나간 뒤, 좁은 화면에서는 다시 화면 안쪽으로 밀어 넣어요.
+        // y는 화면에서 아래가 +이므로 반전(-y)해야 기존과 같은 방향이 나와요.
+        const pos = clampFixedPosition(cx + x - 21, cy - y - 21, 42, 42);
+        btn.style.left   = `${pos.left}px`;
+        btn.style.top    = `${pos.top}px`;
         btn.style.right  = 'auto';
         btn.style.bottom = 'auto';
         btn.style.animationDelay = `${i * 35}ms`;
@@ -732,6 +794,7 @@ function createSearchBar() {
     if (document.getElementById('smm-searchbar')) {
         return;
     }
+    updateMobileLayoutVars();
 
     const bar = document.createElement('div');
     bar.id = 'smm-searchbar';
@@ -910,6 +973,7 @@ function createListPanel() {
     if (document.getElementById('smm-list-overlay')) {
         return;
     }
+    updateMobileLayoutVars();
 
     const overlay = document.createElement('div');
     overlay.id = 'smm-list-overlay';
@@ -1013,6 +1077,7 @@ function openSwipeListPanel() {
         renderSwipeListRows();
         return;
     }
+    updateMobileLayoutVars();
 
     const overlay = document.createElement('div');
     overlay.id = 'smm-swipe-list-overlay';
@@ -1184,6 +1249,7 @@ function openSwipeDetailPanel(mesId) {
     closeSwipeListPanel();
     currentSwipeDetailMesId = mesId;
     swipeExpandedSet.clear();
+    updateMobileLayoutVars();
 
     const mes = context.chat[mesId];
 
@@ -1451,6 +1517,7 @@ document.addEventListener('mousedown', (e) => {
  */
 function init() {
     getSettings();
+    setupMobileLayoutVars();
     createFloatingButton();
 
     // 확장이 켜지는 시점에 이미 화면에 그려져 있는 메시지들에도 아이콘을 붙여줘요.

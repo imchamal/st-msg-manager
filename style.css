@@ -8,6 +8,11 @@
    3) 삭제 같은 위험한 동작만 빨간색 계열로 고정
    ============================================================ */
 
+:root {
+    /* JS가 SillyTavern 하단 입력창 위치를 측정해 갱신해요. 실패하면 이 기본값을 사용합니다. */
+    --smm-bottom-offset: 90px;
+}
+
 /* 화면에 떠있는 원형 플로팅 버튼 */
 #smm-floating-button {
     position: fixed;
@@ -553,11 +558,11 @@
     overflow-y: auto;
 }
 
-/* 모바일 보정: SillyTavern 하단 입력창, 브라우저 safe area, 좁은 가로폭과 겹치지 않게 조정해요. */
-@media (max-width: 600px) {
+/* 모바일/태블릿 보정: SillyTavern은 가로 폰까지 1000px 이하를 좁은 화면으로 다뤄요. */
+@media screen and (max-width: 1000px) {
     #smm-floating-button {
         right: 12px;
-        bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(var(--smm-bottom-offset, 90px) + 18px + env(safe-area-inset-bottom, 0px));
         z-index: 10002;
     }
 
@@ -574,18 +579,21 @@
     #smm-searchbar {
         left: 8px;
         right: 8px;
-        /* 하단 입력창 위로 띄우는 값이에요. SillyTavern 하단 UI 높이가 바뀌면 여기부터 조정하세요. */
-        bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        /* 하단 입력창 실측값을 쓰므로, SillyTavern UI 높이가 바뀌어도 여기 숫자를 직접 맞출 일이 줄어듭니다. */
+        bottom: calc(var(--smm-bottom-offset, 90px) + env(safe-area-inset-bottom, 0px));
         transform: none;
         width: auto;
         max-width: calc(100vw - 16px);
         box-sizing: border-box;
         z-index: 10001;
+        max-height: max(96px, calc(100dvh - var(--smm-bottom-offset, 90px) - 16px));
+        overflow-y: auto;
     }
 
     #smm-scrollbar {
-        justify-content: center;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(34px, 1fr)) 54px repeat(4, minmax(34px, 1fr));
+        align-items: center;
         border-radius: 18px;
         padding: 7px 8px;
     }
@@ -595,14 +603,38 @@
     }
 
     .smm-search-row {
-        flex-wrap: wrap;
+        display: grid;
+        align-items: center;
+        gap: 6px;
+    }
+
+    #smm-searchbar .smm-search-row:first-child {
+        grid-template-columns: minmax(0, 1fr) 34px 34px minmax(42px, auto) 34px 34px 34px;
+    }
+
+    #smm-search-replace-row {
+        grid-template-columns: minmax(0, 1fr) auto 34px;
     }
 
     #smm-search-input,
     #smm-replace-input {
-        flex: 1 1 120px;
         min-width: 0;
-        width: auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .smm-scroll-btn {
+        min-width: 0;
+        height: 32px;
+        padding: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #smm-go-input {
+        width: 100%;
+        min-width: 0;
     }
 
     #smm-list-overlay,
@@ -610,8 +642,8 @@
     #smm-swipe-detail-overlay {
         align-items: flex-end;
         padding: 8px;
-        /* 목록/스와이프 패널도 하단 입력창을 피해 아래쪽에 붙여요. */
-        padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        /* 목록/스와이프 패널도 같은 하단 실측값을 써서 bottom sheet처럼 입력창 위에 붙여요. */
+        padding-bottom: calc(var(--smm-bottom-offset, 90px) + 8px + env(safe-area-inset-bottom, 0px));
         box-sizing: border-box;
         z-index: 10000;
     }
@@ -620,8 +652,32 @@
     #smm-swipe-list-panel,
     #smm-swipe-detail-panel {
         width: 100%;
-        max-height: min(78dvh, calc(100vh - 112px));
-        border-radius: 14px;
+        max-height: max(240px, min(70dvh, calc(100dvh - var(--smm-bottom-offset, 90px) - 24px)));
+        border-radius: 14px 14px 0 0;
+    }
+
+    .smm-list-row {
+        gap: 6px;
+        padding: 9px 10px;
+    }
+
+    .smm-list-name {
+        min-width: 48px;
+        max-width: 72px;
+    }
+
+    #smm-list-footer {
+        padding: 8px 10px;
+    }
+
+    .smm-swipe-detail-top {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto 28px 28px;
+        gap: 6px;
+    }
+
+    .smm-swipe-adopt-btn {
+        padding: 0 7px;
     }
 }
 
